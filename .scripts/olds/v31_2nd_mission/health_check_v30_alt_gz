@@ -1,0 +1,5 @@
+#!/bin/bash
+# health_check_v30_alt_gz - System Health Check
+
+cd "$(dirname "$0")"
+../../.venv/bin/python process_manager.py health

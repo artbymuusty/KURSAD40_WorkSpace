@@ -1,0 +1,14 @@
+flight_backend:
+  connection_string: "serial:///dev/ttyUSB0:57600"  # TODO: ekip gerçek portu belirleyecek
+camera:
+  device_index_or_pipeline: 0  # TODO: ekip gerçek kamera indexini/pipeline'ı belirleyecek
+control_gains:
+  kp_horizontal: 0.5   # TODO: fiziksel testle kalibre edilecek
+  kp_vertical: 0.3      # TODO: fiziksel testle kalibre edilecek
+  kp_altitude: 0.5       # TODO: fiziksel testle kalibre edilecek
+  # Operator-specified centering precision (2026-08-13 revision): ±0.01
+  # normalized in both axes.
+  centering_tolerance_x: 0.01
+  centering_tolerance_y: 0.01
+actuator:
+  pickup_channel: null  # TODO: gerçek servo/AUX kanal numarası

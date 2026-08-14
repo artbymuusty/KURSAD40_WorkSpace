@@ -1,0 +1,426 @@
+<title>ADR-005 — Mission Dashboard Migration</title>
+<style>
+/* ===================================================================
+   TOKENS — shared series identity with ADR-004
+=================================================================== */
+:root{
+  --bg:#EEF0EE; --surface:#FFFFFF; --surface-2:#E4E8E3; --ink:#1B2321; --ink-muted:#55625C; --ink-faint:#8B968F;
+  --rule:#CBD2CB; --rule-strong:#A9B3A9; --accent:#1F6F72; --accent-ink:#0F4547; --accent-wash:#DCEBEA;
+  --warn:#8A5A05; --warn-wash:#F3E3C4; --critical:#8C2C22; --critical-wash:#F3DAD4; --good:#2E6B45; --good-wash:#DCEADF;
+  --paper:#F7F5EE; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+  --font-display:"Archivo Narrow","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --font-body:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14181A; --surface:#1B2124; --surface-2:#232A2C; --ink:#E7EAE6; --ink-muted:#9AA6A0; --ink-faint:#657069;
+    --rule:#2C3437; --rule-strong:#3C4649; --accent:#57C2C2; --accent-ink:#8FDBDB; --accent-wash:#1C3436;
+    --warn:#E0A542; --warn-wash:#3B300F; --critical:#E58A7C; --critical-wash:#3A1F1A; --good:#7FCB9B; --good-wash:#173627;
+    --paper:#EDEAE0; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181A; --surface:#1B2124; --surface-2:#232A2C; --ink:#E7EAE6; --ink-muted:#9AA6A0; --ink-faint:#657069;
+  --rule:#2C3437; --rule-strong:#3C4649; --accent:#57C2C2; --accent-ink:#8FDBDB; --accent-wash:#1C3436;
+  --warn:#E0A542; --warn-wash:#3B300F; --critical:#E58A7C; --critical-wash:#3A1F1A; --good:#7FCB9B; --good-wash:#173627;
+  --paper:#EDEAE0; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+}
+:root[data-theme="light"]{
+  --bg:#EEF0EE; --surface:#FFFFFF; --surface-2:#E4E8E3; --ink:#1B2321; --ink-muted:#55625C; --ink-faint:#8B968F;
+  --rule:#CBD2CB; --rule-strong:#A9B3A9; --accent:#1F6F72; --accent-ink:#0F4547; --accent-wash:#DCEBEA;
+  --warn:#8A5A05; --warn-wash:#F3E3C4; --critical:#8C2C22; --critical-wash:#F3DAD4; --good:#2E6B45; --good-wash:#DCEADF;
+  --paper:#F7F5EE; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+}
+*{box-sizing:border-box;}
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.65; }
+::selection{background:var(--accent-wash); color:var(--accent-ink);}
+a{color:var(--accent-ink); text-decoration-thickness:1px; text-underline-offset:2px;}
+a:focus-visible, button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
+@media (prefers-reduced-motion: reduce){ *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;} }
+h1,h2,h3,h4{ font-family:var(--font-display); color:var(--ink); text-wrap:balance; margin:0; }
+p{ margin:0 0 1em; max-width:72ch; }
+code, .mono{ font-family:var(--font-mono); font-size:0.86em; font-variant-numeric:tabular-nums; }
+p code, li code, td code{ background:var(--surface-2); color:var(--accent-ink); padding:0.05em 0.35em; border-radius:3px; white-space:nowrap; }
+
+.frame{ display:grid; grid-template-columns: 272px minmax(0,1fr); max-width:1320px; margin:0 auto; }
+@media (max-width: 980px){ .frame{ grid-template-columns: 1fr; } .toc{ position:static !important; height:auto !important; border-right:none !important; border-bottom:1px solid var(--rule); } }
+.toc{ position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto; padding:28px 20px 40px; border-right:1px solid var(--rule); }
+.toc-mark{ font-family:var(--font-display); font-weight:800; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:4px; }
+.toc-title{ font-family:var(--font-display); font-weight:700; font-size:1.05rem; line-height:1.25; margin-bottom:22px; color:var(--ink); }
+.toc nav{ display:flex; flex-direction:column; }
+.toc nav a{ display:flex; gap:10px; align-items:baseline; font-family:var(--font-display); font-size:0.86rem; color:var(--ink-muted); text-decoration:none; padding:5px 0; }
+.toc nav a:hover{ color:var(--accent-ink); }
+.toc nav a .n{ font-family:var(--font-mono); font-size:0.74rem; color:var(--ink-faint); min-width:1.6em; }
+.toc-status{ margin-top:26px; padding-top:16px; border-top:1px solid var(--rule); font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-faint); line-height:1.9; }
+.toc-status b{ color:var(--ink-muted); font-weight:600; }
+main{ padding:0 0 120px; min-width:0; }
+
+.titleblock{ border-bottom:2px solid var(--ink); padding:52px 56px 28px; }
+.titleblock .eyebrow{ font-family:var(--font-display); font-weight:700; font-size:0.72rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:14px; }
+.titleblock h1{ font-size:clamp(1.9rem, 3.4vw, 2.7rem); font-weight:800; letter-spacing:-0.01em; line-height:1.08; max-width:24ch; }
+.titleblock .dek{ font-family:var(--font-body); font-style:italic; color:var(--ink-muted); font-size:1.05rem; max-width:64ch; margin-top:14px; }
+.plate{ margin-top:30px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-top:1px solid var(--rule-strong); }
+.plate div{ padding:12px 18px 12px 0; border-right:1px solid var(--rule); }
+.plate div:last-child{ border-right:none; }
+.plate .k{ font-family:var(--font-display); font-size:0.66rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px; }
+.plate .v{ font-family:var(--font-mono); font-size:0.83rem; color:var(--ink); }
+@media (max-width:700px){ .plate{ grid-template-columns:repeat(2,1fr);} .titleblock{padding:36px 24px 24px;} }
+
+.verdict-strip{ margin:34px 56px 0; padding:22px 24px; background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--accent); }
+.verdict-strip .lbl{ font-family:var(--font-display); font-weight:700; font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:10px; }
+.vitem{ display:flex; gap:14px; padding:9px 0; border-top:1px dashed var(--rule); }
+.vitem:first-of-type{ border-top:none; }
+.vitem .num{ font-family:var(--font-mono); color:var(--ink-faint); font-size:0.85rem; padding-top:2px; }
+.vitem p{ margin:0; font-size:0.95rem; }
+@media (max-width:700px){ .verdict-strip{margin-left:24px;margin-right:24px;} }
+
+.section{ padding:44px 56px 6px; border-top:1px solid var(--rule); }
+@media (max-width:700px){ .section{ padding:32px 24px 6px; } }
+.section-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:18px; }
+.section-head .sn{ font-family:var(--font-mono); font-size:1.6rem; color:var(--ink-faint); font-weight:600; line-height:1; }
+.section-head h2{ font-size:1.4rem; font-weight:700; }
+.subhead{ font-family:var(--font-display); font-weight:700; font-size:1.02rem; margin:26px 0 10px; color:var(--ink); }
+.subhead .sn{ font-family:var(--font-mono); color:var(--accent-ink); font-weight:600; margin-right:8px; }
+.prose{ max-width:74ch; }
+.prose ul, .prose ol{ max-width:72ch; padding-left:1.25em; margin:0 0 1em; }
+.prose li{ margin-bottom:0.4em; }
+blockquote.principle{ margin:0 0 1em; padding:2px 0 2px 16px; border-left:2px solid var(--accent); color:var(--ink-muted); font-style:italic; max-width:66ch; }
+.callout{ max-width:74ch; margin:18px 0; padding:14px 18px; background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--accent); font-size:0.94rem; }
+.callout.critical{ border-left-color:var(--critical); }
+.callout .lbl{ font-family:var(--font-display); font-weight:700; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px; }
+.callout.critical .lbl{ color:var(--critical); }
+
+.tbl-wrap{ overflow-x:auto; margin:8px 0 24px; border:1px solid var(--rule); }
+table{ border-collapse:collapse; width:100%; min-width:560px; font-size:0.88rem; }
+th, td{ text-align:left; padding:9px 14px; border-bottom:1px solid var(--rule); vertical-align:top; }
+thead th{ font-family:var(--font-display); font-weight:700; font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-muted); background:var(--surface-2); border-bottom:1px solid var(--rule-strong); white-space:nowrap; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background:var(--surface); }
+td{ font-family:var(--font-body); }
+td.num, th.num{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+.chip{ display:inline-block; font-family:var(--font-display); font-weight:700; font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; padding:2px 8px; border-radius:2px; white-space:nowrap; }
+.chip-critical{ background:var(--critical-wash); color:var(--critical); }
+.chip-warn{ background:var(--warn-wash); color:var(--warn); }
+.chip-good{ background:var(--good-wash); color:var(--good); }
+.chip-neutral{ background:var(--surface-2); color:var(--ink-muted); }
+.chip-accent{ background:var(--accent-wash); color:var(--accent-ink); }
+
+.code-block{ margin:14px 0 24px; border:1px solid var(--rule-strong); background:var(--surface-2); overflow-x:auto; }
+.code-block .cap{ font-family:var(--font-mono); font-size:0.7rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.08em; padding:9px 16px; border-bottom:1px solid var(--rule); }
+.code-block pre{ margin:0; padding:16px; font-family:var(--font-mono); font-size:0.8rem; line-height:1.6; color:var(--ink); white-space:pre; }
+.code-block .c-comment{ color:var(--ink-faint); font-style:italic; }
+.code-block .c-kw{ color:var(--accent-ink); }
+
+.checklist{ list-style:none; padding-left:0; max-width:72ch; }
+.checklist li{ display:flex; gap:10px; padding:6px 0; border-bottom:1px dashed var(--rule); font-size:0.95rem; }
+.checklist li:last-child{ border-bottom:none; }
+.checklist .box{ font-family:var(--font-mono); color:var(--ink-faint); }
+
+.closing{ padding:44px 56px 90px; border-top:1px solid var(--rule); }
+footer.docfoot{ padding:26px 56px 60px; color:var(--ink-faint); font-family:var(--font-mono); font-size:0.78rem; }
+@media (max-width:700px){ .closing, footer.docfoot{ padding-left:24px; padding-right:24px; } }
+</style>
+
+<div class="frame">
+  <aside class="toc">
+    <div class="toc-mark">ADR-005</div>
+    <div class="toc-title">Mission Dashboard Migration</div>
+    <nav>
+      <a href="#s0"><span class="n">00</span>Field findings</a>
+      <a href="#s1"><span class="n">01</span>Method</a>
+      <a href="#s2"><span class="n">02</span>V30→V32 lineage</a>
+      <a href="#s3"><span class="n">03</span>The V32 fork</a>
+      <a href="#s4"><span class="n">04</span>Feature comparison</a>
+      <a href="#s5"><span class="n">05</span>Root cause, traced</a>
+      <a href="#s6"><span class="n">06</span>Latent regression</a>
+      <a href="#s7"><span class="n">07</span>Görev 3 gap</a>
+      <a href="#s8"><span class="n">08</span>Target architecture</a>
+      <a href="#s9"><span class="n">09</span>Event flow</a>
+      <a href="#s10"><span class="n">10</span>Runtime lifecycle</a>
+      <a href="#s11"><span class="n">11</span>Required changes</a>
+      <a href="#s12"><span class="n">12</span>Migration plan</a>
+      <a href="#s13"><span class="n">13</span>Risk analysis</a>
+      <a href="#s14"><span class="n">14</span>Compatibility</a>
+      <a href="#s15"><span class="n">15</span>Acceptance</a>
+    </nav>
+    <div class="toc-status">
+      <div><b>Status</b> &nbsp;Investigation complete</div>
+      <div><b>Companion</b> &nbsp;ADR-004</div>
+      <div><b>Implementation</b> &nbsp;Not authorized yet</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="titleblock">
+      <div class="eyebrow">Architecture Decision Record · Investigation + Migration Plan</div>
+      <h1>Mission Dashboard — Archaeology &amp; Migration</h1>
+      <div class="dek">The dashboard was never deleted. What regressed is thread isolation, backpressure, and crash safety — and the symptom on screen right now traces to a different, already-known bug entirely.</div>
+      <div class="plate">
+        <div><div class="k">Owner</div><div class="v">Principal Software Architect</div></div>
+        <div><div class="k">Companion to</div><div class="v">ADR-004 — Mission Operations Center</div></div>
+        <div><div class="k">Applies to</div><div class="v">v32_flight_stack — Görev 2 + Görev 3</div></div>
+        <div><div class="k">Status</div><div class="v">Investigation complete, plan proposed</div></div>
+      </div>
+    </div>
+
+    <section class="section" id="s0">
+      <div class="section-head"><span class="sn">00</span><h2>Field findings — read this first</h2></div>
+      <div class="prose"><p>Three things are true simultaneously, and conflating them will misdirect the fix:</p></div>
+      <div class="verdict-strip">
+        <div class="lbl">Verdict</div>
+        <div class="vitem"><div class="num">01</div><p><b>The dashboard was not deleted.</b> It exists in every version, V30 through the current <code>v32_flight_stack</code>, and is constructor-wired into all three live entrypoints today.</p></div>
+        <div class="vitem"><div class="num">02</div><p><b>What actually regressed is architectural, not presence/absence.</b> V30/V31's dashboard ran on a dedicated thread behind a bounded queue with crash isolation. <code>v32_flight_stack</code>'s <code>Dashboard</code> runs synchronously, unisolated, inside the mission's own coroutine.</p></div>
+        <div class="vitem"><div class="num">03</div><p><b>The reported symptom — &ldquo;mission starts, drone takes off, dashboard never opens&rdquo; — has a precise root cause that is neither of the above.</b> It's the still-open <code>upload_mission()</code> empty-mission bug identified earlier this engagement: it causes the only loop that ever calls <code>dashboard.update()</code> to never run at all.</p></div>
+      </div>
+      <div class="prose" style="margin-top:22px;"><p>Fixing the dashboard-open symptom today requires fixing <code>upload_mission()</code>, not the dashboard. Fixing the dashboard <em>architecture</em> — restoring V30/V31's isolation guarantees inside <code>v32_flight_stack</code> — is a separate, still-necessary migration, detailed below.</p></div>
+    </section>
+
+    <section class="section" id="s1">
+      <div class="section-head"><span class="sn">01</span><h2>Investigation method</h2></div>
+      <div class="prose">
+        <p>Comparative, evidence-first, no assumptions: byte-level <code>diff</code> of <code>debug_view.py</code> and <code>main.py</code> across <code>v31_3rd_mission/</code> and <code>v32/</code>; <code>grep</code> for dashboard/viewer/EventBus symbols across every version directory and <code>v32_flight_stack</code>; direct reads of <code>mission_types.py</code>, <code>debug_view.py</code>, <code>core/telemetry/dashboard.py</code>, both orchestrators, <code>master_fsm.py</code>, and all three <code>main_*.py</code> entrypoints; <code>ast.parse</code> against the flat <code>v32/main.py</code> to verify a suspected syntax defect; the three <code>run_mission_v32_*.sh</code> launchers to determine what actually executes; <code>git log</code> for commit-level attribution.</p>
+      </div>
+      <div class="callout critical">
+        <div class="lbl">Git history disclosure</div>
+        <code>.scripts/olds/</code> (V30 through <code>v32_flight_stack</code>) entered this repository in a single commit — <code>c5eb734e5a</code>, &ldquo;Initial import: modified PX4 (Kursad edition) + scripts,&rdquo; 2025-11-27. There is no incremental history showing the V30→V31→V32 evolution. <b>The requested &ldquo;which commits/refactors caused it&rdquo; cannot be answered from commit history — none exists.</b> The findings below are reconstructed from structural file-tree comparison instead, which is conclusive on its own.
+      </div>
+    </section>
+
+    <section class="section" id="s2">
+      <div class="section-head"><span class="sn">02</span><h2>Where the dashboard existed — V30 → V31 → V32(flat)</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Module</th><th>Role</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td><code>mission_types.py</code></td><td><code>Event</code>, <code>EventBus</code> (per-subscriber try/except isolation), <code>event_bus</code> singleton, <code>UISnapshot</code> (frozen dataclass — vision/mission/flight/servo/diagnostics/map fields)</td><td>present, near-identical, V30 through flat V32</td></tr>
+          <tr><td><code>debug_view.py</code></td><td><code>DebugView</code> — camera feed + 9-panel dark-theme dashboard. <code>UIWorker</code> — owns window lifecycle.</td><td><b>byte-identical</b> between <code>v31_3rd_mission/</code> and <code>v32/</code> (<code>diff</code> exit 0)</td></tr>
+          <tr><td><code>main.py</code></td><td>Constructs &amp; auto-starts <code>UIWorker</code> immediately after core init; every tick builds a snapshot and updates it; stops it in <code>finally:</code></td><td><code>main.py:127-129, 260-304, 317</code> — line numbers stable V31→V32</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="subhead"><span class="sn">2.1</span>The isolation properties that mattered most</div>
+      <div class="prose"><p><code>debug_view.py:400-482</code> — all real <code>cv2</code> work happens on a dedicated thread; the flight loop's only contact with it is a non-blocking, bounded-queue <code>put()</code>:</p></div>
+      <div class="code-block">
+        <div class="cap">debug_view.py — UIWorker</div>
+        <pre><span class="c-kw">class</span> UIWorker:
+    <span class="c-comment">"""Dedicated thread for rendering OpenCV UI to prevent blocking the flight loop."""</span>
+    <span class="c-kw">def</span> start(self):
+        self.thread = threading.Thread(target=self._run, daemon=<span class="c-kw">True</span>)
+        self.thread.start()
+
+    <span class="c-kw">def</span> update(self, snapshot: UISnapshot):
+        <span class="c-comment"># this runs directly on the main mission loop's thread, so it
+        # must never raise: an unhandled exception here would take the
+        # mission down with it, not just the dashboard.</span>
+        <span class="c-kw">try</span>:
+            self.snapshot_queue.put(snapshot, block=<span class="c-kw">False</span>)
+        <span class="c-kw">except</span> queue.Full:
+            self.dropped_snapshots += <span class="c-kw">1</span>  <span class="c-comment"># drop-oldest, keep the flight loop at rate</span>
+
+    <span class="c-kw">def</span> _run(self):
+        <span class="c-kw">while</span> self.running:
+            <span class="c-kw">try</span>:
+                snapshot = self.snapshot_queue.get(timeout=<span class="c-kw">0.05</span>)
+                self.debug_view.draw_dashboard(snapshot, ...)
+            <span class="c-kw">except</span> queue.Empty:
+                <span class="c-kw">pass</span></pre>
+      </div>
+      <div class="prose"><p>This is exactly the &ldquo;mission runtime must never block on the Ops Center&rdquo; property ADR-004 (§1, §13) proposed as new. <b>It already existed. It is what got lost.</b> <code>main.py</code>'s own call site adds a second, independent layer: the entire snapshot-construction-and-update block is wrapped in its own try/except, commented <em>&ldquo;a bug in snapshot construction or rendering can never take the mission loop down with it.&rdquo;</em></p></div>
+    </section>
+
+    <section class="section" id="s3">
+      <div class="section-head"><span class="sn">03</span><h2>The V32 fork — two codebases, one name</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th></th><th><code>.scripts/olds/v32/*.py</code> (flat)</th><th><code>v32_flight_stack/</code> (package)</th></tr></thead>
+        <tbody>
+          <tr><td>Structure</td><td>single-directory procedural <code>main.py</code>, direct V30/V31 continuation</td><td>ground-up rewrite — <code>core/</code>, <code>gz_system/</code>, <code>real_system/</code>, <code>dual_system/</code>, own <code>pyproject.toml</code></td></tr>
+          <tr><td>Dashboard</td><td><code>UIWorker</code>/<code>DebugView</code> — full 9-panel, threaded, byte-identical to V31</td><td><code>Dashboard</code> — HUD only, synchronous</td></tr>
+          <tr><td><b>Actually launched by</b></td><td><i>no script found that runs this</i></td><td><code>run_mission_v32_real.sh</code>, <code>_gz.sh</code>, <code>_dual.sh</code> — all three <code>exec</code> into this package</td></tr>
+          <tr><td>Runnable right now?</td><td><span class="chip chip-critical">No</span> — <code>v32/main.py:52</code> is <code>prev_time = time.time()1</code>, a hard <code>SyntaxError</code>, verified with <code>ast.parse</code></td><td><span class="chip chip-good">Yes</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout">
+        <div class="lbl">Conclusion</div>
+        The flat <code>v32/</code> directory — currently open in the editor — is not the live system. It is abandoned mid-edit or superseded debris left beside the real rewrite. Every finding past this point refers to <code>v32_flight_stack</code>, because that is what <code>RUN MISSION</code> actually executes.
+      </div>
+    </section>
+
+    <section class="section" id="s4">
+      <div class="section-head"><span class="sn">04</span><h2>Feature &amp; property comparison</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Property</th><th>V30/V31/V32(flat)</th><th><code>v32_flight_stack</code></th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td>Event bus</td><td>module-level pub/sub, per-subscriber isolation</td><td><b>absent entirely</b> — zero matches anywhere</td><td><span class="chip chip-critical">Dropped</span></td></tr>
+          <tr><td>Structured snapshot</td><td><code>UISnapshot</code> — frozen dataclass, ~25 typed fields</td><td><code>Dashboard.update()</code> — 6 loose kwargs</td><td><span class="chip chip-warn">Reduced</span></td></tr>
+          <tr><td>Rendering thread</td><td>dedicated <code>threading.Thread(daemon=True)</code></td><td>none — inline in the calling coroutine</td><td><span class="chip chip-critical">Dropped</span></td></tr>
+          <tr><td>Backpressure</td><td>bounded queue, drop-oldest</td><td>none — direct <code>cv2.imshow</code> every tick</td><td><span class="chip chip-critical">Dropped</span></td></tr>
+          <tr><td>Crash isolation</td><td>two layers</td><td><b>none</b></td><td><span class="chip chip-critical">Dropped — see §6</span></td></tr>
+          <tr><td>Panel set</td><td>9 panels incl. auto-fit mission map</td><td>1 HUD strip, 4 fields + boxes</td><td><span class="chip chip-warn">Reduced</span></td></tr>
+          <tr><td>Auto-launch on mission start</td><td>yes, unconditional</td><td>structurally yes, blocked by §5</td><td><span class="chip chip-accent">Present, blocked</span></td></tr>
+          <tr><td>Carries through Görev 3</td><td>n/a</td><td><code>Gorev3Orchestrator</code> accepts &amp; uses a <code>dashboard</code> param</td><td><span class="chip chip-good">Present at class level</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s5">
+      <div class="section-head"><span class="sn">05</span><h2>Root cause of the reported symptom — traced, not inferred</h2></div>
+      <div class="prose">
+        <p>Full call chain, <code>gorev2_orchestrator.py</code>:</p>
+        <ol>
+          <li><code>run()</code> connects, arms, takes off to <code>MISSION_ALTITUDE_M</code> — this is the part observed working.</li>
+          <li><code>upload_mission(waypoints)</code> is called with 5 real waypoints, but the backend (<code>mavsdk_backend_base.py:80-84</code>) discards the argument and uploads an empty <code>MissionPlan([])</code> — already identified this engagement, fix not yet applied.</li>
+          <li><code>start_mission()</code> starts the empty mission.</li>
+          <li>For an empty mission, <code>is_mission_finished()</code> returns <code>True</code> on the very first check (<code>current == total == 0</code>).</li>
+          <li><b>The loop body never executes.</b> <code>self.dashboard.update(...)</code> lives entirely inside that loop. <code>cv2.namedWindow</code>/<code>cv2.imshow</code> are never reached. No window opens.</li>
+        </ol>
+      </div>
+      <div class="callout">
+        <div class="lbl">Falsifiable</div>
+        Applying the <code>upload_mission()</code> fix already proposed this engagement is, on its own, sufficient to make the dashboard window appear — independent of anything else in this report.
+      </div>
+    </section>
+
+    <section class="section" id="s6">
+      <div class="section-head"><span class="sn">06</span><h2>Secondary, latent regression</h2></div>
+      <div class="prose">
+        <p>Once §5 is fixed and the loop begins running, <code>self.dashboard.update(...)</code> executes every tick with <b>no surrounding exception handling</b> — unlike either V30/V31 isolation layer. <code>cv2.imshow</code>/<code>cv2.waitKey</code> are not guaranteed to succeed in every deployment environment (headless companion computer, missing Qt platform plugin, SSH without X forwarding). If they raise, the exception propagates out of <code>Gorev2Orchestrator.run()</code> and <b>terminates the entire mission coroutine — mid-flight.</b></p>
+      </div>
+      <div class="callout critical">
+        <div class="lbl">Directly contradicts the stated requirement</div>
+        &ldquo;The Mission Dashboard is NOT a mission controller… it is an observer.&rdquo; Today, a rendering failure isn't just an observer going dark — it can end the mission. This is the most safety-relevant single finding in this report; top migration priority once §5 is fixed.
+      </div>
+    </section>
+
+    <section class="section" id="s7">
+      <div class="section-head"><span class="sn">07</span><h2>Adjacent finding — Mission Complete / Görev 3 is unreachable regardless</h2></div>
+      <div class="prose">
+        <p><code>MasterMissionController</code> is the only component that sequences Görev 2 → Görev 3 → land — the only path by which &ldquo;dashboard remains active through the whole mission, then transitions into Mission Complete&rdquo; could occur end-to-end. A repository-wide search shows it is referenced <b>only inside the file that defines it</b> — none of the three live entrypoints construct or run it. Each calls <code>asyncio.run(orchestrator.run())</code> directly on a bare <code>Gorev2Orchestrator</code>.</p>
+        <p>Today a mission ends when <code>Gorev2Orchestrator.run()</code> returns, with no explicit <code>MISSION_COMPLETE</code> transition and no graceful dashboard handoff. This is independent of the dashboard investigation but blocks part of the required behavior until <code>MasterMissionController</code> is wired into an entrypoint — a mission-sequencing decision this report flags but does not resolve.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s8">
+      <div class="section-head"><span class="sn">08</span><h2>Target architecture — restoring V30/V31's guarantees inside <code>v32_flight_stack</code></h2></div>
+      <div class="prose"><p>Not &ldquo;copy <code>UIWorker</code> back in.&rdquo; <code>v32_flight_stack</code> has a real interface-driven architecture V30/V31 didn't — the migration must fit that shape.</p></div>
+      <div class="subhead"><span class="sn">8.1</span>Preserved from V30/V31 — proven, not experimental</div>
+      <div class="prose"><ul>
+        <li>A pub/sub event model — the same mechanism ADR-004 §12 specified as new; correctly understood here as <em>restoring</em> a pattern that already shipped, not inventing one.</li>
+        <li>A dedicated rendering thread fed through a bounded, drop-oldest queue — <code>UIWorker</code>'s core technique, directly reusable.</li>
+        <li>Two-layer crash isolation: the publish call site never raises, the render thread's own failures never reach the mission coroutine.</li>
+        <li>A structured, typed snapshot as the single object the renderer consumes.</li>
+      </ul></div>
+      <div class="subhead"><span class="sn">8.2</span>What must change to fit <code>v32_flight_stack</code>, not be reintroduced as-is</div>
+      <div class="prose"><ul>
+        <li><code>UISnapshot</code> was built for V30/V31's string-based state model. It must be re-derived from <code>v32_flight_stack</code>'s real objects — and converge with ADR-004's <code>MissionSnapshot</code> rather than compete with it.</li>
+        <li><code>event_bus</code> was a bare module-level global — a coupling smell in the interface-driven <code>v32_flight_stack</code>. It becomes an injected constructor dependency, same pattern already used for <code>flight</code>/<code>camera</code>/<code>detector</code>/<code>actuator</code>.</li>
+        <li><code>DebugView</code>'s 9-panel layout is reusable presentation logic almost as-is — only what populates the snapshot changes, not how the panels draw.</li>
+        <li><code>Gorev3Orchestrator</code> already accepts a <code>dashboard</code> param — no new coupling needed there; it's <code>MasterMissionController</code> (§7) that needs to exist as a live entrypoint for that wiring to matter.</li>
+      </ul></div>
+    </section>
+
+    <section class="section" id="s9">
+      <div class="section-head"><span class="sn">09</span><h2>Event flow (target state)</h2></div>
+      <div class="code-block">
+        <div class="cap">Sequence</div>
+        <pre>RUN MISSION (operator runs run_mission_v32_*.sh)
+  -&gt; main() builds flight/camera/actuator/detector via existing DI pattern
+  -&gt; main() constructs the dashboard's publisher + render-thread pair
+  -&gt; render thread .start()'d -- UNCONDITIONALLY, before orchestrator.run()
+      (matches V30/V31's "automatic, no operator action" behavior)
+  -&gt; orchestrator runs; every tick:
+       - derive a snapshot from live subsystem state
+       - publish it -- non-blocking, bounded queue, drop-oldest
+  -&gt; render thread consumes independently, draws, shows
+  -&gt; on reaching MISSION_COMPLETE / FAILED / ABORTED:
+       - a terminal snapshot is published
+       - render thread stays alive briefly in "Mission Complete" mode
+       - then .stop() from the same finally: pattern main.py uses today</pre>
+      </div>
+    </section>
+
+    <section class="section" id="s10">
+      <div class="section-head"><span class="sn">10</span><h2>Launch sequence &amp; runtime lifecycle</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Step</th><th>Owner</th><th>Blocking to mission?</th></tr></thead>
+        <tbody>
+          <tr><td>Construct flight/camera/actuator/detector</td><td><code>main_*.py</code></td><td>n/a, already sequential</td></tr>
+          <tr><td>Construct dashboard renderer + publisher</td><td><code>main_*.py</code></td><td>No — construction only</td></tr>
+          <tr><td>Start render thread</td><td><code>main_*.py</code>, before <code>orchestrator.run()</code></td><td>No — starts independently</td></tr>
+          <tr><td>Per-tick publish</td><td><code>Gorev2/3Orchestrator.run()</code></td><td><b>No</b> — bounded, non-blocking <code>put()</code>, never a direct <code>cv2</code> call on this thread</td></tr>
+          <tr><td>Render + display</td><td>dedicated thread</td><td>No — isolated by construction</td></tr>
+          <tr><td>Mission terminal state</td><td><code>MasterMissionController</code> (once wired, §7)</td><td>No — one more publish, then…</td></tr>
+          <tr><td>Shutdown</td><td><code>main_*.py</code> <code>finally:</code></td><td>Render thread <code>.stop()</code>, joined with timeout, window destroyed</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s11">
+      <div class="section-head"><span class="sn">11</span><h2>Required changes — descriptive, no implementation here</h2></div>
+      <div class="prose"><ol>
+        <li><b>Fix <code>upload_mission()</code></b> — already scoped this engagement, required before any dashboard change is even observable.</li>
+        <li><b>Wrap both orchestrators' dashboard-update call sites in isolation</b> — restore thread+queue (preferred, matches proven design) or, as a stopgap, wrap the existing synchronous call in try/except. The stopgap alone doesn't fix the async-loop-blocking problem.</li>
+        <li><b>Introduce a snapshot type</b> derived from <code>v32_flight_stack</code>'s real subsystems, converging with ADR-004's <code>MissionSnapshot</code>.</li>
+        <li><b>Introduce an injected publish mechanism</b>, replacing the bare <code>event_bus</code> global with a constructor-injected dependency.</li>
+        <li><b>Port <code>DebugView</code>'s panel-drawing logic</b>, retargeted to the new snapshot type.</li>
+        <li><b>Resolve the <code>MasterMissionController</code> gap (§7)</b> — prerequisite for Mission Complete continuity; a sequencing decision, not a dashboard change.</li>
+        <li><b>Archive or fix the flat <code>v32/</code> directory's <code>SyntaxError</code></b> — not required for the dashboard fix, but currently a landmine for anyone who assumes it's live, exactly the confusion this investigation had to resolve first.</li>
+      </ol></div>
+    </section>
+
+    <section class="section" id="s12">
+      <div class="section-head"><span class="sn">12</span><h2>Migration plan</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th class="num">Phase</th><th>Scope</th><th>Depends on</th></tr></thead>
+        <tbody>
+          <tr><td class="num">0</td><td>Apply the <code>upload_mission()</code> fix</td><td>—</td></tr>
+          <tr><td class="num">1</td><td>Try/except isolation around existing synchronous dashboard calls (stopgap safety net)</td><td>Phase 0, to observe it</td></tr>
+          <tr><td class="num">2</td><td>Injected publisher + dedicated render thread + bounded queue, replacing synchronous call sites</td><td>Phase 1</td></tr>
+          <tr><td class="num">3</td><td>Converged snapshot type; port <code>DebugView</code>'s panels</td><td>Phase 2</td></tr>
+          <tr><td class="num">4</td><td>Resolve <code>MasterMissionController</code> wiring for Mission Complete / Görev 3</td><td>Independent, parallel to 2-3</td></tr>
+          <tr><td class="num">5</td><td>Archive the flat <code>v32/</code> directory unambiguously</td><td>Independent, no code risk</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose"><p style="font-size:0.9rem;color:var(--ink-muted);">Each phase is independently testable and revertible; none requires the others to be complete to ship, aside from the stated dependencies.</p></div>
+    </section>
+
+    <section class="section" id="s13">
+      <div class="section-head"><span class="sn">13</span><h2>Risk analysis</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Dashboard rendering failure aborts a live mission (§6)</td><td>Confirmed live, masked by §5</td><td><span class="chip chip-critical">High</span> — mid-flight mission loss</td><td>Phase 1/2, priority after Phase 0</td></tr>
+          <tr><td>Two competing observability data models (this ADR + ADR-004)</td><td>Medium if migrated in isolation</td><td><span class="chip chip-warn">Medium</span> — duplicated, drifting schemas</td><td>Explicit convergence, §8</td></tr>
+          <tr><td>Render thread contention with the asyncio loop (GIL, frame-copy cost)</td><td>Low-medium, needs field measurement</td><td><span class="chip chip-neutral">Low-medium</span> — dropped frames only</td><td>Keep <code>maxsize=1</code> drop-oldest, measure <code>dropped_snapshot_count</code></td></tr>
+          <tr><td><code>MasterMissionController</code> wiring touches sequencing, not just the dashboard</td><td>Certain, by definition</td><td><span class="chip chip-neutral">Scope creep if bundled</span></td><td>Kept explicitly separate from Phases 0-3</td></tr>
+          <tr><td>Flat <code>v32/</code> mistaken for live code again</td><td>Already happened once</td><td><span class="chip chip-neutral">Low direct, high confusion</span></td><td>Phase 5</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s14">
+      <div class="section-head"><span class="sn">14</span><h2>Compatibility analysis</h2></div>
+      <div class="prose"><ul>
+        <li><b>Backward compatibility with V30/V31:</b> not a goal — nothing outside their own directory imports <code>UISnapshot</code>/<code>event_bus</code>.</li>
+        <li><b>Compatibility with <code>v32_flight_stack</code>'s DI pattern:</b> required and achievable — the dashboard publisher slots into the same constructor-injection pattern every other subsystem already uses.</li>
+        <li><b>Compatibility with <code>Gorev3Orchestrator</code>'s existing <code>dashboard</code> parameter:</b> already compatible — no signature change needed there.</li>
+        <li><b>Compatibility with ADR-004:</b> requires the explicit convergence in §8 — building this in isolation would produce two parallel, divergent observability systems in the same codebase.</li>
+        <li><b>Compatibility with the three run modes:</b> the dashboard publisher should follow the same single-instance-shared-across-backends pattern <code>DualFlightBackend</code> already uses, not be duplicated per backend.</li>
+      </ul></div>
+    </section>
+
+    <section class="closing" id="s15">
+      <div class="section-head"><span class="sn">15</span><h2>Acceptance checklist</h2></div>
+      <div class="prose" style="margin-bottom:14px;"><p>This document moves from &ldquo;proposed&rdquo; to &ldquo;accepted&rdquo; when every row below is either resolved or explicitly deferred with a named owner:</p></div>
+      <ul class="checklist">
+        <li><span class="box">[ ]</span> §5 root cause fix applied and verified (dashboard opens on a real run)</li>
+        <li><span class="box">[ ]</span> §6 crash isolation in place (a forced <code>cv2</code> failure no longer aborts the mission)</li>
+        <li><span class="box">[ ]</span> §8 snapshot convergence decision made (reuse ADR-004's <code>MissionSnapshot</code>, or a documented reason not to)</li>
+        <li><span class="box">[ ]</span> §7 <code>MasterMissionController</code> wiring decision made, even if &ldquo;not yet&rdquo;</li>
+        <li><span class="box">[ ]</span> §11.7 flat <code>v32/</code> directory archived or fixed</li>
+      </ul>
+    </section>
+
+    <footer class="docfoot">ADR-005 · companion to ADR-004 · v32_flight_stack · Investigation complete — implementation not authorized by this document.</footer>
+  </main>
+</div>

@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.9">
+  <world name="default">
+
+    <!-- Physics -->
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+
+    <!-- Environment -->
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type="adiabatic"/>
+
+    <!-- Scene / lighting env -->
+    <scene>
+      <grid>false</grid>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- Ground plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>1 1</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode/>
+            </friction>
+            <bounce/>
+            <contact/>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>500 500</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+
+        <pose>0 0 0 0 0 0</pose>
+
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>1</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+
+        <enable_wind>false</enable_wind>
+      </link>
+
+      <pose>0 0 0 0 0 0</pose>
+      <self_collide>false</self_collide>
+    </model>
+
+    <!--
+      WORLD MODIFICATION (documented per KURSAD40 recovery sprint STEP 6):
+      Vehicle spawn pose is untouched (PX4_GZ_MODEL_POSE is unset everywhere in
+      this repo, so Gazebo uses its default spawn: origin, yaw 0. "Forward"
+      is +X/+North.
+
+      NOTE (historical): the original lawnmower search this comment referred
+      to has since been replaced by a deterministic straight-line search (see
+      search.py, SearchPlanner.start_straight_search), which only ever moves
+      forward from wherever the vehicle currently is and never looks backward.
+
+      Previously blue_hexagon sat at N=-8 (BEHIND the spawn point), which was
+      outside that forward-only sweep and could never be found by the search
+      pattern at all, and red_triangle at N=+3 would have been reached first
+      anyway: the opposite of the required Hexagon-then-Triangle order.
+
+      UPDATE (user request): placed directly in front of the drone (E=0, no
+      lateral offset), on the vehicle's forward (+N) centerline.
+      UPDATE 2 (user request): Blue Hexagon moved +5m further (10m -> 15m
+      from spawn), Red Triangle moved +20m further (20m -> 40m from spawn).
+    -->
+
+    <!-- 🔷 Kalıcı mavi altıgen (STL + klasik malzeme, kendi model.sdf'in) -->
+    <include>
+      <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/models/blue_hexagon/model.sdf</uri>
+      <name>blue_hexagon</name>
+      <!-- X Y Z R P Y: 15m directly in front of the drone.
+           BUG FIX (runtime investigation, 2026-08-13): this used to be
+           "15 0 0.05 0 0 0". Gazebo's world frame is ENU (X=East, Y=North),
+           and the px4-gz bridge maps PX4's local-NED north_m to this world's
+           Y axis, not X. "15 0" therefore placed the model 15m EAST of the
+           drone, not in front on the +N centerline the comment above (and
+           the file header) explicitly call for -- proven via a live MAVSDK
+           Offboard flight: commanding north=15 put the vehicle at world
+           (0,15), 21m from the actual prop at (15,0), while commanding
+           east=15 landed it exactly on top of the prop with a clean,
+           correctly-classified MAVI_ALTIGEN detection dead-center in frame.
+           Swapping X/Y puts the prop on the +N centerline as intended. -->
+      <pose>0 15 0.05 0 0 0</pose>
+    </include>
+
+
+    <!-- 🔺 Kalıcı kırmızı üçgen -->
+    <include>
+      <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/models/red_triangle/model.sdf</uri>
+      <name>red_triangle</name>
+      <!-- 40m directly in front of the drone, 25m past blue_hexagon.
+           BUG FIX (runtime investigation, 2026-08-13): same X/Y axis
+           mix-up as blue_hexagon above -- "40 0" was 40m EAST, not north.
+           See the comment on blue_hexagon's <pose> for the full proof. -->
+      <pose>0 40 0.05 0 0 0</pose>
+    </include>
+
+
+    <!-- Sun -->
+    <light name="sunUTC" type="directional">
+      <pose>0 0 500 0 0 0</pose>
+      <cast_shadows>true</cast_shadows>
+      <intensity>1</intensity>
+      <direction>0.001 0.625 -0.78</direction>
+      <diffuse>0.904 0.904 0.904 1</diffuse>
+      <specular>0.271 0.271 0.271 1</specular>
+      <attenuation>
+        <range>2000</range>
+        <linear>0</linear>
+        <constant>1</constant>
+        <quadratic>0</quadratic>
+      </attenuation>
+      <spot>
+        <inner_angle>0</inner_angle>
+        <outer_angle>0</outer_angle>
+        <falloff>0</falloff>
+      </spot>
+    </light>
+
+    <!-- Geo coords (PX4 default) -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>47.397971057728974</latitude_deg>
+      <longitude_deg>8.546163739800146</longitude_deg>
+      <elevation>0</elevation>
+    </spherical_coordinates>
+
+
+  </world>
+</sdf>

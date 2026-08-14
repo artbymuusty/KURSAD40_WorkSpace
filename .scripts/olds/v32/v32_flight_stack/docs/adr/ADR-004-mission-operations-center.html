@@ -1,0 +1,842 @@
+<title>ADR-004 — KURSAD40 Mission Operations Center</title>
+<style>
+/* ===================================================================
+   TOKENS
+=================================================================== */
+:root{
+  --bg:#EEF0EE;
+  --surface:#FFFFFF;
+  --surface-2:#E4E8E3;
+  --ink:#1B2321;
+  --ink-muted:#55625C;
+  --ink-faint:#8B968F;
+  --rule:#CBD2CB;
+  --rule-strong:#A9B3A9;
+  --accent:#1F6F72;
+  --accent-ink:#0F4547;
+  --accent-wash:#DCEBEA;
+  --warn:#8A5A05;
+  --warn-wash:#F3E3C4;
+  --critical:#8C2C22;
+  --critical-wash:#F3DAD4;
+  --good:#2E6B45;
+  --good-wash:#DCEADF;
+  --paper:#F7F5EE;
+  --paper-ink:#2B2620;
+  --paper-rule:#D8D2C2;
+
+  --font-display:"Archivo Narrow","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --font-body:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14181A;
+    --surface:#1B2124;
+    --surface-2:#232A2C;
+    --ink:#E7EAE6;
+    --ink-muted:#9AA6A0;
+    --ink-faint:#657069;
+    --rule:#2C3437;
+    --rule-strong:#3C4649;
+    --accent:#57C2C2;
+    --accent-ink:#8FDBDB;
+    --accent-wash:#1C3436;
+    --warn:#E0A542;
+    --warn-wash:#3B300F;
+    --critical:#E58A7C;
+    --critical-wash:#3A1F1A;
+    --good:#7FCB9B;
+    --good-wash:#173627;
+    --paper:#EDEAE0;
+    --paper-ink:#2B2620;
+    --paper-rule:#D8D2C2;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181A; --surface:#1B2124; --surface-2:#232A2C; --ink:#E7EAE6; --ink-muted:#9AA6A0; --ink-faint:#657069;
+  --rule:#2C3437; --rule-strong:#3C4649; --accent:#57C2C2; --accent-ink:#8FDBDB; --accent-wash:#1C3436;
+  --warn:#E0A542; --warn-wash:#3B300F; --critical:#E58A7C; --critical-wash:#3A1F1A; --good:#7FCB9B; --good-wash:#173627;
+  --paper:#EDEAE0; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+}
+:root[data-theme="light"]{
+  --bg:#EEF0EE; --surface:#FFFFFF; --surface-2:#E4E8E3; --ink:#1B2321; --ink-muted:#55625C; --ink-faint:#8B968F;
+  --rule:#CBD2CB; --rule-strong:#A9B3A9; --accent:#1F6F72; --accent-ink:#0F4547; --accent-wash:#DCEBEA;
+  --warn:#8A5A05; --warn-wash:#F3E3C4; --critical:#8C2C22; --critical-wash:#F3DAD4; --good:#2E6B45; --good-wash:#DCEADF;
+  --paper:#F7F5EE; --paper-ink:#2B2620; --paper-rule:#D8D2C2;
+}
+
+/* ===================================================================
+   BASE
+=================================================================== */
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.65;
+}
+::selection{background:var(--accent-wash); color:var(--accent-ink);}
+a{color:var(--accent-ink); text-decoration-thickness:1px; text-underline-offset:2px;}
+a:focus-visible, button:focus-visible, summary:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px; border-radius:2px;
+}
+@media (prefers-reduced-motion: reduce){ *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;} }
+
+h1,h2,h3,h4{ font-family:var(--font-display); color:var(--ink); text-wrap:balance; margin:0; }
+p{ margin:0 0 1em; max-width:70ch; }
+.prose p:last-child{ margin-bottom:0; }
+
+code, .mono{ font-family:var(--font-mono); font-size:0.86em; font-variant-numeric:tabular-nums; }
+p code, li code, td code{
+  background:var(--surface-2); color:var(--accent-ink);
+  padding:0.05em 0.35em; border-radius:3px; white-space:nowrap;
+}
+
+/* ===================================================================
+   DOCUMENT FRAME
+=================================================================== */
+.frame{
+  display:grid;
+  grid-template-columns: 272px minmax(0,1fr);
+  max-width:1320px;
+  margin:0 auto;
+}
+@media (max-width: 980px){
+  .frame{ grid-template-columns: 1fr; }
+  .toc{ position:static !important; height:auto !important; border-right:none !important; border-bottom:1px solid var(--rule); }
+}
+
+/* ---- Sidebar / TOC ---- */
+.toc{
+  position:sticky; top:0; align-self:start;
+  height:100vh; overflow-y:auto;
+  padding:28px 20px 40px;
+  border-right:1px solid var(--rule);
+}
+.toc-mark{
+  font-family:var(--font-display); font-weight:800; font-size:0.72rem;
+  letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink);
+  margin-bottom:4px;
+}
+.toc-title{
+  font-family:var(--font-display); font-weight:700; font-size:1.05rem; line-height:1.25;
+  margin-bottom:22px; color:var(--ink);
+}
+.toc nav{ display:flex; flex-direction:column; }
+.toc nav a{
+  display:flex; gap:10px; align-items:baseline;
+  font-family:var(--font-display); font-size:0.86rem; color:var(--ink-muted);
+  text-decoration:none; padding:5px 0; border-bottom:1px solid transparent;
+}
+.toc nav a:hover{ color:var(--accent-ink); }
+.toc nav a .n{ font-family:var(--font-mono); font-size:0.74rem; color:var(--ink-faint); min-width:1.6em; }
+.toc-status{
+  margin-top:26px; padding-top:16px; border-top:1px solid var(--rule);
+  font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-faint); line-height:1.9;
+}
+.toc-status b{ color:var(--ink-muted); font-weight:600; }
+
+/* ---- Main column ---- */
+main{ padding:0 0 120px; min-width:0; }
+
+/* ===================================================================
+   TITLE BLOCK  (blueprint-plate header)
+=================================================================== */
+.titleblock{
+  border-bottom:2px solid var(--ink);
+  padding:52px 56px 28px;
+}
+.titleblock .eyebrow{
+  font-family:var(--font-display); font-weight:700; font-size:0.72rem;
+  letter-spacing:0.16em; text-transform:uppercase; color:var(--accent-ink);
+  margin-bottom:14px;
+}
+.titleblock h1{
+  font-size:clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight:800; letter-spacing:-0.01em; line-height:1.08;
+  max-width:22ch;
+}
+.titleblock .dek{
+  font-family:var(--font-body); font-style:italic; color:var(--ink-muted);
+  font-size:1.05rem; max-width:60ch; margin-top:14px;
+}
+.plate{
+  margin-top:30px;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  border-top:1px solid var(--rule-strong);
+}
+.plate div{ padding:12px 18px 12px 0; border-right:1px solid var(--rule); }
+.plate div:last-child{ border-right:none; }
+.plate .k{
+  font-family:var(--font-display); font-size:0.66rem; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px;
+}
+.plate .v{ font-family:var(--font-mono); font-size:0.83rem; color:var(--ink); }
+@media (max-width:700px){ .plate{ grid-template-columns:repeat(2,1fr);} .titleblock{padding:36px 24px 24px;} }
+
+/* ===================================================================
+   INCIDENT STRIP (section 0 lead-in)
+=================================================================== */
+.incident-strip{
+  margin:0 56px 0; padding:22px 24px; margin-top:34px;
+  background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--critical);
+}
+.incident-strip .lbl{
+  font-family:var(--font-display); font-weight:700; font-size:0.68rem; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--critical); margin-bottom:10px;
+}
+.incident{ display:flex; gap:14px; padding:9px 0; border-top:1px dashed var(--rule); }
+.incident:first-of-type{ border-top:none; }
+.incident .num{ font-family:var(--font-mono); color:var(--ink-faint); font-size:0.85rem; padding-top:2px; }
+.incident p{ margin:0; font-size:0.95rem; }
+
+/* ===================================================================
+   SECTIONS
+=================================================================== */
+.section{
+  padding:44px 56px 6px;
+  border-top:1px solid var(--rule);
+}
+@media (max-width:700px){ .section{ padding:32px 24px 6px; } .incident-strip{margin-left:24px;margin-right:24px;} }
+
+.section-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:18px; }
+.section-head .sn{
+  font-family:var(--font-mono); font-size:1.6rem; color:var(--ink-faint);
+  font-weight:600; line-height:1;
+}
+.section-head h2{ font-size:1.4rem; font-weight:700; }
+
+.subhead{ font-family:var(--font-display); font-weight:700; font-size:1.02rem; margin:26px 0 10px; color:var(--ink); }
+.subhead .sn{ font-family:var(--font-mono); color:var(--accent-ink); font-weight:600; margin-right:8px; }
+
+.prose{ max-width:72ch; }
+.prose ul, .prose ol{ max-width:70ch; padding-left:1.25em; margin:0 0 1em; }
+.prose li{ margin-bottom:0.4em; }
+.prose li p{ margin-bottom:0.3em; }
+
+blockquote.principle{
+  margin:0 0 1em; padding:2px 0 2px 16px; border-left:2px solid var(--accent);
+  color:var(--ink-muted); font-style:italic; max-width:66ch;
+}
+
+.callout{
+  max-width:72ch; margin:18px 0; padding:14px 18px;
+  background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--accent);
+  font-size:0.94rem;
+}
+.callout.critical{ border-left-color:var(--critical); }
+.callout .lbl{
+  font-family:var(--font-display); font-weight:700; font-size:0.68rem; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px;
+}
+.callout.critical .lbl{ color:var(--critical); }
+
+/* ===================================================================
+   TABLES
+=================================================================== */
+.tbl-wrap{ overflow-x:auto; margin:8px 0 24px; border:1px solid var(--rule); }
+table{ border-collapse:collapse; width:100%; min-width:560px; font-size:0.88rem; }
+th, td{ text-align:left; padding:9px 14px; border-bottom:1px solid var(--rule); vertical-align:top; }
+thead th{
+  font-family:var(--font-display); font-weight:700; font-size:0.7rem; letter-spacing:0.06em;
+  text-transform:uppercase; color:var(--ink-muted); background:var(--surface-2);
+  border-bottom:1px solid var(--rule-strong); white-space:nowrap;
+}
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background:var(--surface); }
+td{ font-family:var(--font-body); }
+td.num, th.num{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.tbl-wrap table code{ white-space:normal; }
+
+/* ---- severity / state chips ---- */
+.chip{
+  display:inline-block; font-family:var(--font-display); font-weight:700; font-size:0.66rem;
+  letter-spacing:0.06em; text-transform:uppercase; padding:2px 8px; border-radius:2px; white-space:nowrap;
+}
+.chip-critical{ background:var(--critical-wash); color:var(--critical); }
+.chip-warn{ background:var(--warn-wash); color:var(--warn); }
+.chip-good{ background:var(--good-wash); color:var(--good); }
+.chip-neutral{ background:var(--surface-2); color:var(--ink-muted); }
+.chip-accent{ background:var(--accent-wash); color:var(--accent-ink); }
+
+/* ===================================================================
+   DIAGRAM FRAMES  (fixed "paper" ground so mermaid stays legible
+   regardless of page theme)
+=================================================================== */
+.diagram{
+  margin:10px 0 26px; border:1px solid var(--paper-rule); background:var(--paper);
+  padding:20px; overflow-x:auto;
+}
+.diagram .cap{
+  font-family:var(--font-mono); font-size:0.72rem; color:var(--paper-ink); opacity:0.6;
+  margin-bottom:10px; text-transform:uppercase; letter-spacing:0.08em;
+}
+.diagram pre.mermaid{ margin:0; background:transparent; }
+
+/* ===================================================================
+   ACCEPTANCE TABLE (closing section)
+=================================================================== */
+.closing{
+  padding:44px 56px 90px; border-top:1px solid var(--rule);
+}
+.closing h2{ font-size:1.4rem; margin-bottom:6px; }
+.closing .note{ color:var(--ink-muted); margin-bottom:20px; font-size:0.95rem; }
+
+footer.docfoot{
+  padding:26px 56px 60px; color:var(--ink-faint); font-family:var(--font-mono); font-size:0.78rem;
+}
+@media (max-width:700px){ .closing, footer.docfoot{ padding-left:24px; padding-right:24px; } }
+</style>
+
+<div class="frame">
+
+  <aside class="toc">
+    <div class="toc-mark">ADR-004</div>
+    <div class="toc-title">Mission Operations Center</div>
+    <nav>
+      <a href="#s0"><span class="n">00</span>Why this exists</a>
+      <a href="#s1"><span class="n">01</span>Philosophy</a>
+      <a href="#s2"><span class="n">02</span>Scope &amp; non-goals</a>
+      <a href="#s3"><span class="n">03</span>Architecture overview</a>
+      <a href="#s4"><span class="n">04</span>Explicit mission state</a>
+      <a href="#s5"><span class="n">05</span>Lifecycle state machine</a>
+      <a href="#s6"><span class="n">06</span>Runtime data model</a>
+      <a href="#s7"><span class="n">07</span>Event model</a>
+      <a href="#s8"><span class="n">08</span>Blocking taxonomy</a>
+      <a href="#s9"><span class="n">09</span>Subsystem matrix</a>
+      <a href="#s10"><span class="n">10</span>Health model</a>
+      <a href="#s11"><span class="n">11</span>Dependency graph</a>
+      <a href="#s12"><span class="n">12</span>EventBus</a>
+      <a href="#s13"><span class="n">13</span>Ops Center architecture</a>
+      <a href="#s14"><span class="n">14</span>Integration</a>
+      <a href="#s15"><span class="n">15</span>Logging</a>
+      <a href="#s16"><span class="n">16</span>60-second rule</a>
+      <a href="#s17"><span class="n">17</span>Recovery</a>
+      <a href="#s18"><span class="n">18</span>Watchdogs</a>
+      <a href="#s19"><span class="n">19</span>Replay</a>
+      <a href="#s20"><span class="n">20</span>Metrics</a>
+      <a href="#s21"><span class="n">21</span>Scalability</a>
+      <a href="#s22"><span class="n">22</span>Acceptance criteria</a>
+    </nav>
+    <div class="toc-status">
+      <div><b>Status</b> &nbsp;Proposed</div>
+      <div><b>Supersedes</b> &nbsp;Dashboard, logging-only telemetry</div>
+      <div><b>Scope</b> &nbsp;v32_flight_stack, Görev 2 + 3</div>
+    </div>
+  </aside>
+
+  <main>
+
+    <div class="titleblock">
+      <div class="eyebrow">Architecture Decision Record · Proposed</div>
+      <h1>KURSAD40 Mission Operations Center</h1>
+      <div class="dek">An observability architecture built so the next silent failure is diagnosed from a screen in under sixty seconds — not by re-reading source code under competition pressure.</div>
+      <div class="plate">
+        <div><div class="k">Owner</div><div class="v">Lead Architect / Principal UAV Systems Eng.</div></div>
+        <div><div class="k">Supersedes</div><div class="v">core/telemetry/dashboard.py</div></div>
+        <div><div class="k">Applies to</div><div class="v">v32_flight_stack — Görev 2 + Görev 3</div></div>
+        <div><div class="k">Status</div><div class="v">Proposed — architecture only</div></div>
+      </div>
+    </div>
+
+    <section class="section" id="s0">
+      <div class="section-head"><span class="sn">00</span><h2>Why this document exists</h2></div>
+      <div class="prose">
+        <p>Twice in this engagement, the vehicle appeared to do nothing — <em>&ldquo;climbs to 15&nbsp;m, then hovers&rdquo;</em> — for two completely different root causes. In both cases, no error, no warning, no log line said <em>&ldquo;the mission cannot proceed.&rdquo;</em> The system was in a state indistinguishable from normal operation.</p>
+      </div>
+      <div class="incident-strip">
+        <div class="lbl">Field evidence — this engagement</div>
+        <div class="incident"><div class="num">01</div><p><code>TargetValidator.is_validated()</code> required a condition (<code>is_navigating_to</code>) that no code path ever set. The detection&nbsp;→&nbsp;centering&nbsp;→&nbsp;drop pipeline was permanently unreachable, and nothing reported it.</p></div>
+        <div class="incident"><div class="num">02</div><p><code>MavsdkBackendBase.upload_mission()</code> silently discarded the generated waypoints and uploaded an empty mission. PX4 had nothing to fly, and <code>is_mission_finished()</code> reported <code>True</code> immediately (0&nbsp;==&nbsp;0), skipping the entire mission loop.</p></div>
+      </div>
+      <div class="prose" style="margin-top:22px;">
+        <p>Diagnosing each took a full manual code trace — exactly what the current <code>Dashboard</code> (a synchronous <code>cv2.imshow</code> HUD bolted into the hot loop) cannot help with: it draws bounding boxes on video, nothing about mission state, blocking conditions, or subsystem health. This ADR exists so that gap closes permanently.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s1">
+      <div class="section-head"><span class="sn">01</span><h2>System philosophy</h2></div>
+      <div class="prose">
+        <blockquote class="principle">No silent waits. Every point where the mission runtime is blocked must have a name, an owner, a start time, and — where applicable — a timeout.</blockquote>
+        <p><b>State is a first-class object, not a side effect of control flow.</b> Today, &ldquo;what phase is the mission in&rdquo; is answerable only by knowing which line of <code>Gorev2Orchestrator.run()</code> the interpreter is currently executing. The mission state must be an explicit, queryable data structure that drives control flow <em>and</em> is what the Ops Center reads — one source of truth, not a UI reconstruction of logs.</p>
+        <p><b>Observability is not logging.</b> Logging is one consumer of the event stream, not the mechanism. The runtime publishes structured events; logging, the Ops Center, replay, and analytics are independent subscribers to the same stream.</p>
+        <p><b>The mission runtime must never block on the Ops Center.</b> <code>Dashboard.update()</code> calls <code>cv2.imshow</code>/<code>cv2.waitKey</code> synchronously inside the detection loop today. If a display window hangs or isn't attached in the field, the mission stalls with it. Telemetry publication must be fire-and-forget.</p>
+        <p><b>Every subsystem proves it is alive, not just that it hasn't crashed.</b> A component that stops producing output — camera frozen, detector stuck loading a model, MAVSDK connection silently dropped — is functionally a failure and must be treated as one, via heartbeats and staleness detection, not exception handling alone.</p>
+        <p><b>Design for the postmortem, not just the live view.</b> Every event is durable and replayable. A competition run's full mission history must be reconstructable after the fact, without the aircraft.</p>
+        <p><b>Minimal-diff integration.</b> Existing business logic (<code>Gorev2DurumMachine</code>, <code>PayloadInterlock</code>, <code>PositionStore</code>) is materially correct after this engagement's two fixes and is not rewritten to accommodate observability. Instrumentation is added at existing seams, not by inverting control.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s2">
+      <div class="section-head"><span class="sn">02</span><h2>Scope &amp; non-goals</h2></div>
+      <div class="prose">
+        <p><b>In scope:</b> runtime architecture for mission state, event streaming, health/watchdog monitoring, blocking-reason capture, logging, diagnostics, replay, and integration with existing <code>v32_flight_stack</code> modules.</p>
+        <p><b>Explicitly out of scope:</b> visual design, UI framework, React/Flutter/HTML, network transport security hardening, multi-vehicle swarm coordination (touched only in §21 as a forward-compatibility note). No code is written here; every identifier below refers to the current, real source, so this document is falsifiable against the repository — not aspirational.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s3">
+      <div class="section-head"><span class="sn">03</span><h2>Architecture overview</h2></div>
+      <div class="prose">
+        <p>The existing mandate already splits the system into two runtimes: <b>drone</b> (flight control + Offboard execution only) and <b>GCS</b> (all vision processing). The Mission Operations Center is a third logical role, co-located with the GCS process, but architecturally independent of both.</p>
+      </div>
+      <div class="diagram">
+        <div class="cap">Fig. 1 — process topology</div>
+        <pre class="mermaid">
+flowchart LR
+    subgraph DRONE["Drone (PX4 + MAVSDK link)"]
+        PX4[PX4 Autopilot]
+    end
+
+    subgraph GCS["GCS Process — v32_flight_stack runtime"]
+        FB["Flight Backend<br/>GzFlightBackend / RealFlightBackend / DualFlightBackend"]
+        ORC["Gorev2Orchestrator / Gorev3Orchestrator<br/>MasterMissionController"]
+        VIS["Vision Pipeline<br/>YoloDetector, TargetValidator, TargetSelector"]
+        PAY["Payload Subsystem<br/>PayloadInterlock, PayloadReleaseService"]
+        STORE["MissionMemory<br/>PositionStore, MissionCheckpoint"]
+        EB((EventBus))
+    end
+
+    subgraph OPS["Mission Operations Center — independent consumer"]
+        AGG["Runtime State Aggregator<br/>owns MissionSnapshot"]
+        WD[Watchdog Engine]
+        HM[Health Monitor]
+        LOGGER[Structured Logging Sink]
+        REPLAY["Event Store<br/>append-only JSONL"]
+        PRESENT["Presentation Layer<br/>out of scope for this ADR"]
+    end
+
+    PX4 <-->|MAVLink / MAVSDK| FB
+    FB --> ORC
+    VIS --> ORC
+    PAY --> ORC
+    STORE --> ORC
+    ORC -->|publish, non-blocking| EB
+    FB -->|publish| EB
+    VIS -->|publish| EB
+    PAY -->|publish| EB
+    STORE -->|publish| EB
+
+    EB --> AGG
+    EB --> WD
+    EB --> HM
+    EB --> LOGGER
+    EB --> REPLAY
+    AGG --> PRESENT
+    WD --> PRESENT
+    HM --> PRESENT
+        </pre>
+      </div>
+      <div class="callout">
+        <div class="lbl">Key property</div>
+        The mission runtime has an <b>outbound-only</b> edge to the EventBus. Nothing in the Ops Center can call back into or block the mission runtime — this directly fixes the <code>cv2.waitKey</code>-in-the-hot-loop problem in the current <code>Dashboard</code>.
+      </div>
+    </section>
+
+    <section class="section" id="s4">
+      <div class="section-head"><span class="sn">04</span><h2>The core correction — explicit mission state</h2></div>
+      <div class="prose">
+        <p>Today, mission &ldquo;state&rdquo; is implicit: <code>Gorev2Orchestrator.run()</code> is one long <code>async def</code> where progress is encoded as which <code>await</code> the coroutine is suspended on, plus local booleans (<code>gorev2_tamamlandi</code>, <code>current_state_text</code>). <code>Gorev2DurumMachine</code> is <em>not</em> the mission state machine the Görev 2 report calls for — it only covers the DURUM-1..4 payload-priority decision. No object anywhere answers &ldquo;what phase is the mission in right now&rdquo; without reading a log tail.</p>
+        <p><b>Correction:</b> introduce an explicit <code>MissionPhase</code> enum and a <code>MissionContext</code> object that is mutated only through named transitions (<code>context.transition_to(phase, reason)</code>), is what the orchestrators hold and update, is published to the EventBus on every transition, and is queryable synchronously at any instant (<code>context.snapshot()</code>) — so a late-attaching Ops Center can render current state without replaying history.</p>
+        <p>This single change is what makes &ldquo;why isn't the drone moving&rdquo; mechanically answerable: the answer is always <code>context.current_phase</code> + <code>context.blocking_reason</code> (§8), not a code trace.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s5">
+      <div class="section-head"><span class="sn">05</span><h2>Mission lifecycle state machine</h2></div>
+      <div class="prose">
+        <p>Phases are the 19-step Görev 2 sequence extended with the Görev 3 phases already implemented in code (<code>gorev3_precondition.py</code>, <code>gorev3_pickup.py</code>, <code>gorev3_transport.py</code>, <code>gorev3_redrop.py</code>, <code>gorev3_finish.py</code>), plus explicit <span class="chip chip-critical">FAILURE</span> / <span class="chip chip-critical">ABORT</span> / <span class="chip chip-critical">TIMEOUT</span> terminal states the current code has no concept of at all.</p>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th class="num">#</th><th>Phase</th><th>Owning component (current)</th><th>Entry condition</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><code>MISSION_INIT</code></td><td><code>main_gz.py</code> / <code>main_real.py</code> wiring</td><td>process start</td></tr>
+          <tr><td class="num">2</td><td><code>CONNECTING</code></td><td><code>MavsdkBackendBase.connect()</code></td><td><code>orchestrator.run()</code> called</td></tr>
+          <tr><td class="num">3</td><td><code>ARMING</code></td><td><code>MavsdkBackendBase.arm()</code></td><td>connection established</td></tr>
+          <tr><td class="num">4</td><td><code>TAKEOFF</code></td><td><code>MavsdkBackendBase.takeoff()</code></td><td>armed</td></tr>
+          <tr><td class="num">5</td><td><code>CLIMB_TO_ALTITUDE</code></td><td><span class="chip chip-warn">gap</span> currently <code>asyncio.sleep(5.0)</code> — no real check</td><td>takeoff issued</td></tr>
+          <tr><td class="num">6</td><td><code>CHECKPOINT_SAVE</code></td><td><code>MissionCheckpoint.save()</code></td><td>altitude phase complete</td></tr>
+          <tr><td class="num">7</td><td><code>MISSION_ROUTE_GENERATE</code></td><td><code>Gorev2Orchestrator._generate_square_mission()</code></td><td>checkpoint saved</td></tr>
+          <tr><td class="num">8</td><td><code>MISSION_UPLOAD</code></td><td><code>MavsdkBackendBase.upload_mission()</code></td><td>route generated</td></tr>
+          <tr><td class="num">9</td><td><code>MISSION_START</code></td><td><code>MavsdkBackendBase.start_mission()</code></td><td>upload acked</td></tr>
+          <tr><td class="num">10</td><td><code>SEARCHING</code> (Mission mode, vision active)</td><td>main loop, <code>Gorev2Orchestrator.run()</code></td><td>mission started</td></tr>
+          <tr><td class="num">11</td><td><code>TARGET_TRACKING</code></td><td><code>TargetValidator.is_track_ready()</code></td><td>detection above confidence threshold</td></tr>
+          <tr><td class="num">12</td><td><code>SWITCH_TO_OFFBOARD</code></td><td><code>CenteringController.switch_to_offboard()</code></td><td>track-ready</td></tr>
+          <tr><td class="num">13</td><td><code>GOTO_TARGET</code> / <code>CENTERING</code></td><td><code>CenteringController.go_to_and_center()</code></td><td>offboard active</td></tr>
+          <tr><td class="num">14</td><td><code>HOVER_CONFIRM</code></td><td><code>CenteringController.hover_and_confirm()</code></td><td>centered</td></tr>
+          <tr><td class="num">15</td><td><code>GPS_SAVE</code></td><td><code>PositionStore.try_save()</code></td><td>hover complete</td></tr>
+          <tr><td class="num">16</td><td><code>PAYLOAD_DECISION</code></td><td><code>Gorev2DurumMachine.on_target_confirmed()</code></td><td>GPS saved</td></tr>
+          <tr><td class="num">17</td><td><code>PAYLOAD_RELEASE</code></td><td><code>PayloadReleaseService.release_and_verify()</code></td><td>DURUM-1/3/4 selected</td></tr>
+          <tr><td class="num">18</td><td><code>PAYLOAD_VERIFY</code></td><td><code>PayloadReleaseService</code> (marker re-detection)</td><td>release issued, non-blocking</td></tr>
+          <tr><td class="num">19</td><td><code>RETURN_TO_SECOND_TARGET</code></td><td>DURUM-3 branch, <code>Gorev2Orchestrator.run()</code></td><td>payload 1 released, target 2 known</td></tr>
+          <tr><td class="num">20</td><td><code>GOREV2_COMPLETE</code></td><td><code>PayloadInterlock.both_released()</code></td><td>both payloads released</td></tr>
+          <tr><td class="num">21</td><td><code>GOREV3_START</code> (hook)</td><td><code>MasterMissionController.run()</code> → <code>Gorev3Orchestrator.run()</code></td><td>Görev 2 complete, Offboard not exited</td></tr>
+          <tr><td class="num">22</td><td><code>GOREV3_*</code> phases</td><td><code>gorev3_*.py</code></td><td>sequential</td></tr>
+          <tr><td class="num">23</td><td><code>RETURN_TO_CHECKPOINT</code></td><td><code>Gorev3FinishPhase.run()</code></td><td>Görev 3 finish phase</td></tr>
+          <tr><td class="num">24</td><td><code>LANDING</code></td><td><code>flight.land()</code></td><td>checkpoint reached</td></tr>
+          <tr><td class="num">25</td><td><code>MISSION_COMPLETE</code></td><td>terminal</td><td>landed</td></tr>
+          <tr><td class="num">26</td><td><code>MISSION_FAILED</code></td><td><span class="chip chip-critical">missing</span></td><td>unrecoverable subsystem error</td></tr>
+          <tr><td class="num">27</td><td><code>MISSION_ABORTED</code></td><td><span class="chip chip-critical">missing</span></td><td>operator-issued abort</td></tr>
+          <tr><td class="num">28</td><td><code>MISSION_TIMEOUT</code></td><td><span class="chip chip-critical">missing</span> — <code>GOREV2_MAX_FLIGHT_DURATION_S=600</code> configured, never read</td><td>elapsed &gt; 600s</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose"><p>Every phase transition is a <code>MISSION_PHASE_CHANGED</code> event (§7). Phases 26–28 are new terminal states the current code cannot reach even in principle — flagged explicitly because &ldquo;the drone just sits there forever&rdquo; is currently a valid, unbounded outcome of the state machine, not a bug that trips a boundary.</p></div>
+    </section>
+
+    <section class="section" id="s6">
+      <div class="section-head"><span class="sn">06</span><h2>Runtime data model — <code>MissionSnapshot</code></h2></div>
+      <div class="prose"><p>The single queryable object the Ops Center reads. Field groups, not code:</p></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Group</th><th>Fields</th></tr></thead>
+        <tbody>
+          <tr><td><code>identity</code></td><td>mission_id, started_at, elapsed_s, timeout_budget_s, timeout_remaining_s</td></tr>
+          <tr><td><code>phase</code></td><td>phase, phase_entered_at, phase_elapsed_s</td></tr>
+          <tr><td><code>blocking</code></td><td>waiting_on, owning_subsystem, since, timeout_at, last_known_cause — <code>null</code> means not blocked</td></tr>
+          <tr><td><code>vehicle</code></td><td>connected, armed, flight_mode, position + age, attitude, gps_fix_type, ekf_status<sup>†</sup>, battery_pct<sup>†</sup></td></tr>
+          <tr><td><code>mission</code></td><td>checkpoint, route, route_source, uploaded flag, <code>upload_item_count</code>, progress</td></tr>
+          <tr><td><code>vision</code></td><td>detector_ready<sup>†</sup>, last_frame_at, frame_age_s, effective_hz, detections, active_track (consecutive_frames, is_centered, is_navigating_to, altitude_ok)</td></tr>
+          <tr><td><code>targets</code></td><td>selected, other_temp_memory, saved_points (from <code>PositionStore.all_points()</code>)</td></tr>
+          <tr><td><code>payload</code></td><td>interlock state, verification outcome</td></tr>
+          <tr><td><code>debounce</code></td><td>per-shape cooldown remaining</td></tr>
+          <tr><td><code>health</code> / <code>watchdogs</code></td><td>see §10, §18</td></tr>
+          <tr><td><code>recent_events</code></td><td>ring buffer, last N</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose"><p style="font-size:0.85rem;color:var(--ink-muted);">† Not currently read anywhere in the codebase — see §9.1, §9.2 for the specific gap.</p></div>
+    </section>
+
+    <section class="section" id="s7">
+      <div class="section-head"><span class="sn">07</span><h2>Event model</h2></div>
+
+      <div class="subhead"><span class="sn">7.1</span>Envelope — every event, no exceptions</div>
+      <div class="tbl-wrap"><table>
+        <tbody>
+          <tr><td class="num"><code>event_id</code></td><td>ULID — sortable, unique</td></tr>
+          <tr><td class="num"><code>ts</code></td><td>UTC, monotonic-safe</td></tr>
+          <tr><td class="num"><code>mission_id</code></td><td>—</td></tr>
+          <tr><td class="num"><code>category</code></td><td>LIFECYCLE · TELEMETRY · VISION · NAVIGATION · PAYLOAD · HEALTH · WATCHDOG · LOG · OPERATOR</td></tr>
+          <tr><td class="num"><code>subsystem</code></td><td>e.g. <code>Gorev2Orchestrator</code>, <code>TargetValidator</code>, <code>MavsdkBackendBase</code></td></tr>
+          <tr><td class="num"><code>severity</code></td><td>DEBUG · INFO · WARN · CRITICAL · FATAL</td></tr>
+          <tr><td class="num"><code>code</code></td><td>stable machine-readable code, e.g. <code>MISSION_UPLOAD_EMPTY</code></td></tr>
+          <tr><td class="num"><code>message</code></td><td>human-readable, operator-facing</td></tr>
+          <tr><td class="num"><code>correlation_id</code></td><td>links a causal chain — e.g. one full target-acquisition attempt</td></tr>
+          <tr><td class="num"><code>data</code></td><td>structured, event-specific payload</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="subhead"><span class="sn">7.2</span>Canonical event catalog</div>
+      <div class="prose"><p>Extends the example list; grounded in real code paths. <span class="chip chip-warn">gap</span> marks events with no equivalent in the current codebase today.</p></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Code</th><th>Category</th><th>Fires when / source</th></tr></thead>
+        <tbody>
+          <tr><td><code>MISSION_STARTED</code></td><td>LIFECYCLE</td><td><code>MasterMissionController.run()</code> entry <span class="chip chip-warn">gap</span></td></tr>
+          <tr><td><code>CONNECTED</code> / <code>ARMED</code> / <code>TAKEOFF_ISSUED</code></td><td>LIFECYCLE</td><td>existing calls, need events</td></tr>
+          <tr><td><code>ALTITUDE_REACHED</code></td><td>LIFECYCLE</td><td><span class="chip chip-critical">gap</span> today a blind <code>sleep(5.0)</code>; must become telemetry-driven</td></tr>
+          <tr><td><code>CHECKPOINT_SAVED</code></td><td>LIFECYCLE</td><td>existing, <code>MissionCheckpoint.save()</code></td></tr>
+          <tr><td><code>ROUTE_GENERATED</code></td><td>NAVIGATION</td><td>existing, <code>_generate_square_mission()</code></td></tr>
+          <tr><td><code>MISSION_UPLOAD_REQUESTED</code></td><td>LIFECYCLE</td><td>before <code>upload_mission()</code>, include waypoint count <span class="chip chip-warn">gap</span></td></tr>
+          <tr><td><code>MISSION_UPLOAD_CONFIRMED</code></td><td>LIFECYCLE</td><td><span class="chip chip-critical">gap, critical</span> assert <code>uploaded_count == requested_count</code> — would have caught the empty-mission bug at the source</td></tr>
+          <tr><td><code>MISSION_UPLOAD_MISMATCH</code></td><td>LIFECYCLE</td><td><span class="chip chip-critical">gap, critical</span> counts disagree</td></tr>
+          <tr><td><code>MISSION_FINISHED_UNEXPECTED</code></td><td>WATCHDOG</td><td><span class="chip chip-critical">gap</span> <code>is_mission_finished()==True</code> with 0 detections processed and low elapsed time — the exact signature of the §0 bug</td></tr>
+          <tr><td><code>DETECTION_MODEL_NOT_LOADED</code></td><td>HEALTH</td><td><span class="chip chip-warn">gap</span> <code>YoloDetector._model is None</code> on a <code>detect()</code> call — currently silent</td></tr>
+          <tr><td><code>DETECTION_BELOW_THRESHOLD</code></td><td>VISION</td><td><span class="chip chip-warn">gap</span> filtered by confidence — currently invisible</td></tr>
+          <tr><td><code>TARGET_DEBOUNCED</code></td><td>VISION</td><td>existing logic, needs event</td></tr>
+          <tr><td><code>TARGET_SELECTED</code> / <code>TARGET_DEFERRED_TO_MEMORY</code></td><td>VISION</td><td>existing, <code>TargetSelector.select()</code></td></tr>
+          <tr><td><code>TRACK_READY</code></td><td>VISION</td><td>existing (post-fix), <code>is_track_ready()</code></td></tr>
+          <tr><td><code>CENTERING_TIMED_OUT</code></td><td>NAVIGATION</td><td><span class="chip chip-critical">gap, critical</span> 30-attempt loop exhausted — currently returns <code>False</code> and the caller discards it, proceeding as if centering succeeded</td></tr>
+          <tr><td><code>GPS_SAVE_REJECTED</code> / <code>GPS_SAVE_CONFIRMED</code></td><td>VISION</td><td><code>PositionStore.try_save()</code></td></tr>
+          <tr><td><code>DURUM_1..4_TRIGGERED</code></td><td>PAYLOAD</td><td>existing logic, needs event</td></tr>
+          <tr><td><code>INTERLOCK_VIOLATION_BLOCKED</code></td><td>PAYLOAD</td><td><span class="chip chip-critical">critical</span> <code>PayloadInterlock.mark_payload_2_released()</code> raises — must also be an event so it reaches the operator, not just an exception</td></tr>
+          <tr><td><code>MISSION_TIMEOUT_EXCEEDED</code></td><td>WATCHDOG</td><td><span class="chip chip-critical">gap</span> elapsed &gt; <code>GOREV2_MAX_FLIGHT_DURATION_S</code> — config exists, no consumer today</td></tr>
+          <tr><td><code>SUBSYSTEM_HEARTBEAT_MISSED</code> / <code>WATCHDOG_FIRED</code></td><td>HEALTH / WATCHDOG</td><td><span class="chip chip-warn">gap</span> see §10, §18</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s8">
+      <div class="section-head"><span class="sn">08</span><h2>Blocking / waiting taxonomy</h2></div>
+      <div class="prose"><p>Every row is a named, reportable <code>waiting_on</code> value, discovered by walking the actual call graph of <code>Gorev2Orchestrator.run()</code> — not a hypothetical list.</p></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th><code>waiting_on</code></th><th>Real code location</th><th>Current behavior if stuck</th></tr></thead>
+        <tbody>
+          <tr><td><code>WAITING_MAVSDK_CONNECTION</code></td><td><code>MavsdkBackendBase.connect()</code></td><td>blocks forever, no timeout</td></tr>
+          <tr><td><code>WAITING_ALTITUDE_REACHED</code></td><td>fixed <code>asyncio.sleep(5.0)</code>, <code>gorev2_orchestrator.py:70</code></td><td><span class="chip chip-critical">not a real check</span> a guess — if takeoff is slow, orchestrator proceeds believing it's at 15&nbsp;m regardless</td></tr>
+          <tr><td><code>WAITING_MISSION_UPLOAD_ACK</code></td><td><code>upload_mission()</code></td><td><span class="chip chip-critical">the §0 bug</span> &ldquo;success&rdquo; with 0 items looks identical to success with 5</td></tr>
+          <tr><td><code>WAITING_DETECTOR_MODEL_LOAD</code></td><td><code>YoloDetector.detect()</code> — <code>if self._model is None: return []</code></td><td><span class="chip chip-critical">silent forever</span> indistinguishable from &ldquo;no targets in view&rdquo;</td></tr>
+          <tr><td><code>WAITING_CONFIDENCE_THRESHOLD</code></td><td>detections filtered below <code>YOLO_CONFIDENCE_THRESHOLD</code></td><td>invisible — operator doesn't know a shape is seen but rejected</td></tr>
+          <tr><td><code>WAITING_DEBOUNCE_COOLDOWN</code></td><td><code>DebounceTracker.is_in_cooldown()</code></td><td>invisible</td></tr>
+          <tr><td><code>WAITING_TRACK_READY</code></td><td><code>TargetValidator.is_track_ready()</code></td><td>now reachable post-fix; sub-conditions not individually visible</td></tr>
+          <tr><td><code>WAITING_CENTERING_CONVERGENCE</code></td><td><code>go_to_and_center()</code>, 30×0.1s</td><td><span class="chip chip-critical">live bug-class</span> times out silently, returns <code>False</code>, caller ignores it and proceeds to hover anyway</td></tr>
+          <tr><td><code>WAITING_PAYLOAD_INTERLOCK</code></td><td><code>can_release_payload_2()==False</code></td><td>correct, expected (DURUM-2) — must be distinguishable from a stuck wait</td></tr>
+          <tr><td><code>WAITING_PAYLOAD_VERIFICATION</code></td><td>marker re-detection</td><td>correctly non-blocking per spec — must render as informational, never escalate</td></tr>
+          <tr><td><code>MISSION_TIMEOUT_BUDGET</code></td><td>not a subsystem wait — the outer bound on all waits</td><td><code>GOREV2_MAX_FLIGHT_DURATION_S</code> defined, never checked</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout critical">
+        <div class="lbl">Required distinction</div>
+        Two categories must be tagged explicitly in <code>BlockingState</code>: <b>EXPECTED_WAIT</b> (correctly blocked by design) vs. <b>BLOCKING_WAIT</b> (acceptable only up to a timeout). The current codebase has <b>zero</b> instances of the second category actually enforcing a timeout — the single most important behavioral gap this ADR closes.
+      </div>
+    </section>
+
+    <section class="section" id="s9">
+      <div class="section-head"><span class="sn">09</span><h2>Subsystem integration matrix</h2></div>
+
+      <div class="subhead"><span class="sn">9.1</span>Flight Backend — <code>IFlightBackend</code> → <code>GzFlightBackend</code> / <code>RealFlightBackend</code> / <code>DualFlightBackend</code></div>
+      <div class="prose"><ul>
+        <li><b>Exposes</b> connection state, armed state, flight mode, position, attitude, mission progress.</li>
+        <li><b>Metrics</b> telemetry update rate, command round-trip latency, position age.</li>
+        <li><b>Health check</b> last telemetry sample &lt; 1s old; connection state == connected.</li>
+        <li><b>Gap</b> <code>drone.telemetry.health()</code> (EKF / GPS-fix / pre-arm checks) is available from MAVSDK today and is <span class="chip chip-critical">never called anywhere</span> in the codebase.</li>
+      </ul></div>
+
+      <div class="subhead"><span class="sn">9.2</span>Vision Pipeline — <code>YoloDetector</code>, <code>TargetValidator</code>, <code>TargetSelector</code></div>
+      <div class="prose"><ul>
+        <li><b>Exposes</b> model-loaded state, per-frame detections, per-shape tracking state, selection outcome.</li>
+        <li><b>Metrics</b> effective Hz — must validate against config bounds <code>CAMERA_PROCESS_FREQ_HZ_MIN/MAX = 10/30</code>, <span class="chip chip-warn">currently unmeasured</span>.</li>
+        <li><b>Health check</b> model loaded <em>and</em> last frame within staleness window.</li>
+      </ul></div>
+
+      <div class="subhead"><span class="sn">9.3</span>Navigation / Visual Servo — <code>CenteringController</code></div>
+      <div class="prose"><ul>
+        <li><b>Exposes</b> current pursuit target, pixel error, convergence state, gain values (<code>kp_horizontal</code>/<code>kp_vertical</code> — currently placeholders per the <code>TODO[KONTROL]</code> in source).</li>
+        <li><b>Metrics</b> time-to-converge, pixel-error trend, target-lost recoveries.</li>
+        <li><b>Health check</b> while active, error must be decreasing — a timeout with no progress is a fault, not just an expiry.</li>
+      </ul></div>
+
+      <div class="subhead"><span class="sn">9.4</span>Payload Subsystem — <code>PayloadInterlock</code>, <code>PayloadReleaseService</code>, actuator implementations</div>
+      <div class="prose"><ul>
+        <li><b>Exposes</b> interlock state, release-in-progress state, verification outcome.</li>
+        <li><b>Errors</b> <code>mark_payload_2_released()</code> raising <code>RuntimeError</code> is the interlock working <em>correctly</em> — must never be silently swallowed, must be <span class="chip chip-critical">CRITICAL</span>, not just an exception.</li>
+      </ul></div>
+
+      <div class="subhead"><span class="sn">9.5</span>MissionMemory — <code>PositionStore</code>, <code>MissionCheckpoint</code></div>
+      <div class="prose"><ul>
+        <li><b>Exposes</b> all saved <code>TargetPoint</code>s, checkpoint coordinates, save/rejection history.</li>
+        <li><b>Errors</b> checkpoint-not-saved is a hard <code>RuntimeError</code> from <code>MissionCheckpoint.get()</code> — correct, but must also be a CRITICAL event so an operator sees it on screen, not in a stack trace.</li>
+      </ul></div>
+
+      <div class="subhead"><span class="sn">9.6</span>Search Planner — does not exist as a named component today</div>
+      <div class="prose">
+        <p><code>Gorev2Orchestrator._generate_square_mission()</code> is a private method embedded in the orchestrator, not an independent, observable component. <b>Recommendation:</b> extract a <code>SearchPlanner</code> class (<code>generate(center, size) → list[Waypoint]</code>) so route generation is independently observed (a real <code>ROUTE_GENERATED</code> payload, not implied by upload) and swappable later — this is also the correct seam for a future QGC-sourced polygon strategy, which this ADR does not add.</p>
+      </div>
+
+      <div class="subhead"><span class="sn">9.7</span>Configuration — <code>core/config/parameters.py</code></div>
+      <div class="prose"><p>Exposed as a versioned snapshot attached to <code>mission_id</code> at startup, so replay knows exactly which thresholds were active. Health check: no required-for-current-phase parameter is still <code>None</code> (e.g. <code>NORMAL_MISSION_SPEED_M_S</code>, <code>GOREV3_TRANSIT_SPEED_M_S</code>).</p></div>
+    </section>
+
+    <section class="section" id="s10">
+      <div class="section-head"><span class="sn">10</span><h2>Health model</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip chip-good">Healthy</span></td><td>heartbeat/output within cadence, no active warnings</td></tr>
+          <tr><td><span class="chip chip-warn">Degraded</span></td><td>operating but outside nominal parameters (e.g. detection Hz below 10)</td></tr>
+          <tr><td><span class="chip chip-neutral">Stale</span></td><td>expected heartbeat missed once, within grace period</td></tr>
+          <tr><td><span class="chip chip-critical">Down</span></td><td>heartbeat missed beyond grace period, or a dependency is <code>DOWN</code></td></tr>
+          <tr><td><span class="chip chip-neutral">Unknown</span></td><td>not yet initialized — no data since mission start</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose"><p>The Health Monitor computes state purely from event timestamps and declared cadences — subsystems don't self-report health, they just keep emitting on schedule. Going silent <em>is</em> the signal. Dependency propagation: if Flight Backend is <code>DOWN</code>, Navigation and Payload are forced <code>DOWN</code> too, regardless of their own last heartbeat — their outputs are meaningless without it. This requires the dependency graph in §11 to be encoded, not just documented.</p></div>
+    </section>
+
+    <section class="section" id="s11">
+      <div class="section-head"><span class="sn">11</span><h2>Dependency graph</h2></div>
+      <div class="diagram">
+        <div class="cap">Fig. 2 — subsystem dependency &amp; event flow</div>
+        <pre class="mermaid">
+flowchart TD
+    PX4 --> FlightBackend
+    FlightBackend --> Navigation
+    FlightBackend --> MissionUpload
+    Camera --> Detector
+    Detector --> TargetValidator
+    TargetValidator --> TargetSelector
+    TargetSelector --> Navigation
+    Navigation --> MissionMemory
+    MissionMemory --> PayloadDecision
+    PayloadDecision --> PayloadInterlock
+    PayloadInterlock --> PayloadActuator
+    PayloadActuator --> PayloadVerification
+    Detector --> PayloadVerification
+    Config --> Detector
+    Config --> Navigation
+    Config --> PayloadDecision
+    StateMachine --> EventBus
+    FlightBackend --> EventBus
+    Detector --> EventBus
+    PayloadInterlock --> EventBus
+    EventBus --> HealthMonitor
+    EventBus --> Watchdog
+    EventBus --> OpsCenter
+        </pre>
+      </div>
+      <div class="prose"><p>This graph is what makes health propagation and blocking-reason attribution mechanical rather than guesswork: if Navigation is stuck, the Ops Center walks <em>up</em> this graph to find the first <code>DOWN</code>/<code>STALE</code> ancestor and reports that as root cause, not the symptom.</p></div>
+    </section>
+
+    <section class="section" id="s12">
+      <div class="section-head"><span class="sn">12</span><h2>Observability architecture — EventBus</h2></div>
+      <div class="prose">
+        <ul>
+          <li><b>Transport (v1)</b> in-process <code>asyncio.Queue</code> pub/sub, one publisher (the mission runtime), multiple subscribers (Aggregator, Health Monitor, Watchdog Engine, Logging Sink, Event Store). No network hop required — runtime and Ops Center already share the GCS host.</li>
+          <li><b>Publish contract</b> <code>publish(event)</code> is synchronous-to-call, asynchronous-to-deliver — bounded queue, drop-oldest-and-count-drops policy, so a slow subscriber can never back-pressure the mission runtime. A dropped event still emits a meta-event (<code>EVENTBUS_BACKPRESSURE_DROPPED</code>), so drops are themselves observable.</li>
+          <li><b>Durability boundary</b> the Event Store subscriber is the system of record for replay (§19), independent of whether live subscribers were attached.</li>
+          <li><b>Why not a broker in v1</b> current deployment is single-process, single-host, single-vehicle. A broker adds a failure mode — broker down ⇒ blind mission — with no present benefit. §21 revisits this for multi-vehicle/remote-viewer scenarios.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="s13">
+      <div class="section-head"><span class="sn">13</span><h2>Mission Operations Center architecture</h2></div>
+      <div class="prose">
+        <p>Three internal roles, each an independent EventBus subscriber, each individually restartable without affecting the mission runtime or each other:</p>
+        <ol>
+          <li><b>Runtime State Aggregator</b> — folds the event stream into the live <code>MissionSnapshot</code>. Only component allowed to mutate the snapshot.</li>
+          <li><b>Watchdog Engine</b> — owns all timers from §18, independent of the Aggregator, so a frozen Aggregator cannot mask a watchdog firing.</li>
+          <li><b>Health Monitor</b> — computes the health matrix from heartbeat cadence, independent of both.</li>
+        </ol>
+        <p>A <b>Presentation Layer</b> (explicitly out of scope) reads <code>MissionSnapshot</code>, subscribes to live events, and queries the Event Store for history. It has zero business logic: no subsystem should ever require it to be running to function correctly.</p>
+        <p><b>Auto-open requirement:</b> &ldquo;RUN MISSION&rdquo; issuing the mission-start command is itself the first <code>MISSION_STARTED</code> event; the launcher is responsible for also starting/focusing the Ops Center process. This is process-supervision, out of scope here — but the architectural hook is that <code>MISSION_STARTED</code> is unambiguous and machine-detectable the instant it happens, not inferred from telemetry.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s14">
+      <div class="section-head"><span class="sn">14</span><h2>Integration architecture</h2></div>
+      <div class="prose">
+        <p>Minimal-diff, per philosophy §1:</p>
+        <ul>
+          <li>Every constructor in <code>core/mission/*</code>, <code>core/navigation/*</code>, <code>core/detection/*</code> gains one injected dependency: a <code>publisher: EventPublisher</code>, with a default no-op implementation so tests and the mocks in <code>tests/mocks/</code> require zero changes.</li>
+          <li>Existing <code>logger.info</code>/<code>logger.warning</code> call sites are not deleted — each is paired with a <code>publisher.publish(Event(...))</code> carrying the same information structurally. A mechanical, low-risk change: every log call site audited in §7–§8 becomes exactly one additional line.</li>
+          <li><code>Gorev2Orchestrator.run()</code> gains explicit <code>context.transition_to(phase, reason)</code> calls at each §5 boundary — replacing <code>current_state_text</code>, which today exists only for the old <code>Dashboard</code>'s HUD text and is used nowhere else.</li>
+          <li><code>MavsdkBackendBase.upload_mission()</code> — beyond the functional fix already applied, gains the item-count assertion from §7.2 as the permanent regression guard for the §0 bug class.</li>
+          <li><code>CenteringController.go_to_and_center()</code> — its return value must stop being discarded by the caller; a timeout becomes a <code>BLOCKING_WAIT</code>, not a silently-ignored <code>False</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="s15">
+      <div class="section-head"><span class="sn">15</span><h2>Logging architecture</h2></div>
+      <div class="prose">
+        <p>Replaces <code>mission_logger.py</code>'s three flat loggers (<code>core</code>, <code>real_system</code>, <code>gz_system</code>) with:</p>
+        <ul>
+          <li><b>Structured, not string-formatted</b> — log records are the same <code>Event</code> objects from §7, serialized as JSON Lines. Logging becomes a projection of the event stream, eliminating the risk of log text and actual state drifting apart — exactly what happened in both §0 bugs, where the logs &ldquo;looked&rdquo; like the system was working.</li>
+          <li><b>Correlation</b> every event carries <code>mission_id</code> and, where applicable, <code>correlation_id</code> — one full target-acquisition attempt shares one ID, so a postmortem can filter to &ldquo;everything that happened while pursuing target #2&rdquo; in one query.</li>
+          <li><b>Retention</b> one JSONL file per <code>mission_id</code> (not per process-restart timestamp), rotated only by mission boundary — always &ldquo;everything that happened in this flight.&rdquo;</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="s16">
+      <div class="section-head"><span class="sn">16</span><h2>Diagnostic architecture — the 60-second rule</h2></div>
+      <div class="prose">
+        <p>The Presentation Layer must render, from <code>MissionSnapshot</code> alone, a single &ldquo;Blocking Reason Panel&rdquo; answering, without log-reading:</p>
+        <ol>
+          <li>Current phase, and how long it's been in that phase vs. expected max.</li>
+          <li><code>blocking</code>, if non-null: what it's waiting on, which subsystem owns it, elapsed, remaining time to timeout.</li>
+          <li><code>HealthMatrix</code>, filtered to non-Healthy entries only.</li>
+          <li>Active watchdogs (§18) and remaining time.</li>
+          <li>Last 10 events, most recent first, severity-marked.</li>
+          <li>Interlock state, always visible regardless of phase — the single most safety-critical piece of state in the system.</li>
+        </ol>
+      </div>
+      <div class="callout">
+        <div class="lbl">What this panel would have shown, this engagement</div>
+        <p style="margin-bottom:10px;"><b>Bug 1</b> — phase stuck at <code>TARGET_TRACKING</code>, far past expected duration, <code>blocking.waiting_on = WAITING_TRACK_READY</code>, with the three sub-conditions individually visible showing <code>is_navigating_to: false</code> never flipping — pointing directly at the missing call.</p>
+        <p style="margin-bottom:0;"><b>Bug 2</b> — <code>MISSION_UPLOAD_CONFIRMED</code> fires with <code>upload_item_count: 0</code> against <code>requested_item_count: 5</code> — a mismatch visible in under 5 seconds.</p>
+      </div>
+    </section>
+
+    <section class="section" id="s17">
+      <div class="section-head"><span class="sn">17</span><h2>Recovery architecture</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Failure class</th><th>Auto-retry?</th><th>Escalation</th></tr></thead>
+        <tbody>
+          <tr><td>Transient telemetry gap</td><td>n/a</td><td>none</td></tr>
+          <tr><td>Camera frame drop (single)</td><td>yes, next frame</td><td><span class="chip chip-warn">Degraded</span> only if sustained</td></tr>
+          <tr><td>Detector exception, single frame</td><td>yes, skip &amp; continue</td><td>WARN; CRITICAL if N consecutive</td></tr>
+          <tr><td>Centering timeout</td><td>no — re-enter SEARCHING</td><td>WARN, one retry budget per target before CRITICAL</td></tr>
+          <tr><td>Mission upload mismatch</td><td>one retry</td><td>CRITICAL + abort mission-start if second attempt mismatches too</td></tr>
+          <tr><td>Interlock violation attempt</td><td><span class="chip chip-critical">never</span></td><td>CRITICAL, must reach the operator — the interlock already prevented the unsafe action</td></tr>
+          <tr><td>Connection loss mid-mission</td><td>bounded backoff</td><td>CRITICAL + <code>MISSION_ABORTED</code> if unrecovered within budget</td></tr>
+          <tr><td>Mission timeout</td><td>no</td><td>CRITICAL, safe-state trigger — response policy is Açık Nokta&nbsp;C, not resolved here</td></tr>
+        </tbody>
+      </table></div>
+      <blockquote class="principle">Retries apply only to idempotent, non-safety-critical operations. Anything touching the payload interlock or an armed/Offboard transition escalates instead of retrying blindly.</blockquote>
+    </section>
+
+    <section class="section" id="s18">
+      <div class="section-head"><span class="sn">18</span><h2>Watchdog architecture</h2></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Watchdog</th><th>Threshold</th><th>Action on fire</th></tr></thead>
+        <tbody>
+          <tr><td><code>MISSION_TIMEOUT</code></td><td>600s (already configured)</td><td>CRITICAL — Açık Nokta C keeps log/warn-only policy, but this ADR makes it <em>actually fire</em></td></tr>
+          <tr><td><code>PHASE_MAX_DURATION</code></td><td>per-phase budget <span class="chip chip-warn">new config</span></td><td>WARN at 80%, CRITICAL at 100%</td></tr>
+          <tr><td><code>TELEMETRY_STALENESS</code></td><td>1–2s, configurable</td><td>Health → Stale/Down; CRITICAL if sustained mid-mission</td></tr>
+          <tr><td><code>DETECTION_STALENESS</code></td><td>1 / <code>CAMERA_PROCESS_FREQ_HZ_MIN</code></td><td>same pattern</td></tr>
+          <tr><td><code>CENTERING_CONVERGENCE</code></td><td>existing 30×0.1s budget, made real</td><td>WARN → return to SEARCHING</td></tr>
+          <tr><td><code>MISSION_UPLOAD_ACK</code></td><td>≈5s</td><td>CRITICAL if item-count mismatch</td></tr>
+          <tr><td><code>CONNECTION_ESTABLISH</code></td><td>≈15s</td><td>CRITICAL, mission cannot proceed past CONNECTING</td></tr>
+          <tr><td><code>HEARTBEAT_MISSED</code> (generic)</td><td>per-subsystem cadence × grace</td><td><code>SUBSYSTEM_HEARTBEAT_MISSED</code>, feeds HealthMatrix</td></tr>
+        </tbody>
+      </table></div>
+      <div class="prose"><p>Every watchdog is represented in <code>MissionSnapshot.watchdogs</code> while armed, with remaining time — visible, not just functional. An operator sees a watchdog counting down before it fires, not just after.</p></div>
+    </section>
+
+    <section class="section" id="s19">
+      <div class="section-head"><span class="sn">19</span><h2>Mission replay capability</h2></div>
+      <div class="prose"><p>The Event Store is an append-only, ordered, complete JSONL record per <code>mission_id</code>. Replay is: read the file, feed events through the same <code>MissionSnapshot</code>-folding logic the live Aggregator uses, at recorded real-time pacing or accelerated. Replay and the live view are <b>the same code path</b> rendering the same data structure — no separate replay renderer to keep in sync, eliminating an entire class of &ldquo;replay doesn't match what actually happened&rdquo; bugs. This directly serves competition post-run debrief: reconstruct exactly what the state machine believed at every second of the flight, without the aircraft present.</p></div>
+    </section>
+
+    <section class="section" id="s20">
+      <div class="section-head"><span class="sn">20</span><h2>Metrics &amp; analytics</h2></div>
+      <div class="prose">
+        <p>Derived entirely from the event stream, computed by an optional, non-blocking analytics subscriber:</p>
+        <ul>
+          <li>Mission phase durations, actual vs. budgeted — trend across competition attempts.</li>
+          <li>Detection effective Hz vs. the 10–30&nbsp;Hz spec band — currently unmeasured, closed here.</li>
+          <li>Confidence distribution of accepted vs. rejected detections — calibration signal for <code>YOLO_CONFIDENCE_THRESHOLD=0.70</code>.</li>
+          <li>Centering convergence time distribution.</li>
+          <li>Time from <code>TRACK_READY</code> to <code>GPS_SAVE_CONFIRMED</code> — the single most useful competition-performance number.</li>
+          <li>Payload release latency and verification success rate.</li>
+          <li>EventBus drop count — non-zero is itself a signal about the Ops Center's own capacity.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="s21">
+      <div class="section-head"><span class="sn">21</span><h2>Future scalability</h2></div>
+      <div class="prose">
+        <ul>
+          <li><b>Multi-vehicle</b> <code>mission_id</code> is already vehicle-scoped; a fleet moves the EventBus from in-process to a lightweight local broker, adding <code>vehicle_id</code> to the envelope. §5–§10's data model doesn't change shape, only cardinality.</li>
+          <li><b>Remote viewing</b> a durable, ordered Event Store already makes a simple tail-and-forward bridge sufficient for a judge-facing display — no runtime redesign.</li>
+          <li><b>SearchPlanner strategies</b> the §9.6 extraction is what allows a future QGC-sourced polygon strategy, or a coverage-optimized planner, without touching orchestration or observability at all.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="closing" id="s22">
+      <div class="section-head"><span class="sn">22</span><h2>Acceptance criteria</h2></div>
+      <div class="note">Every row must have a corresponding closed change before this ADR moves from <b>Proposed</b> to <b>Accepted / Implemented</b>.</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Gap</th><th>Section</th><th>Severity</th></tr></thead>
+        <tbody>
+          <tr><td>No explicit <code>MissionPhase</code>/<code>MissionContext</code></td><td>§4, §5</td><td><span class="chip chip-critical">Architectural root cause</span></td></tr>
+          <tr><td><code>upload_mission()</code> has no confirmation/assertion of uploaded content</td><td>§7.2, §8, §14</td><td><span class="chip chip-critical">Already caused a production-blocking bug</span></td></tr>
+          <tr><td><code>go_to_and_center()</code> timeout return value discarded</td><td>§8, §9.3, §17</td><td><span class="chip chip-critical">Same bug class, live</span></td></tr>
+          <tr><td><code>asyncio.sleep(5.0)</code> used as fake &ldquo;altitude reached&rdquo; wait</td><td>§5 (#5), §8</td><td><span class="chip chip-warn">Same bug class</span></td></tr>
+          <tr><td><code>YoloDetector</code> silent <code>None</code>-model no-op</td><td>§8, §9.2</td><td><span class="chip chip-critical">Indistinguishable from &ldquo;no targets&rdquo;</span></td></tr>
+          <tr><td><code>GOREV2_MAX_FLIGHT_DURATION_S</code> defined, never enforced</td><td>§18</td><td><span class="chip chip-critical">Dead safety config</span></td></tr>
+          <tr><td>No EKF/GPS-fix/pre-arm health data consumed from MAVSDK</td><td>§9.1</td><td><span class="chip chip-warn">Available today, unused</span></td></tr>
+          <tr><td><code>Dashboard</code> blocks the mission event loop via synchronous <code>cv2</code> calls</td><td>§0, §1, §13</td><td><span class="chip chip-warn">Architectural, being replaced</span></td></tr>
+          <tr><td>No distinction between expected vs. faulty waits anywhere</td><td>§8</td><td><span class="chip chip-critical">Root cause of &ldquo;why isn't it moving&rdquo;</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer class="docfoot">ADR-004 · v32_flight_stack · Proposed — architecture only, no implementation authorized by this document.</footer>
+
+  </main>
+</div>

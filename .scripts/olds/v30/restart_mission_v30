@@ -1,0 +1,8 @@
+#!/bin/bash
+# restart_mission_v30 - Mission Restart Script
+
+cd "$(dirname "$0")"
+echo "Restarting KURSAD40 V30 Mission..."
+./stop_mission_v30
+sleep 1
+./run_mission_v30 "$@"

@@ -1,0 +1,5 @@
+#!/bin/bash
+# status_mission_v30 - Mission Status Script
+
+cd "$(dirname "$0")"
+../../.venv/bin/python process_manager.py status

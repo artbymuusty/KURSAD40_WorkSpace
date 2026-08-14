@@ -1,0 +1,3 @@
+Publishers [Address, Message Type]:
+  tcp://127.0.0.1:44035, gz.msgs.Image
+No subscribers on topic [/world/default/model/x500_mono_cam_down_0/link/camera_link/sensor/camera/image]

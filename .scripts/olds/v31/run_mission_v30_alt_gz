@@ -1,0 +1,11 @@
+#!/bin/bash
+# run_mission_v30_alt_gz - Mission Executor Launcher (ALT_GZ: virtual pickup + Mission 3)
+
+cd "$(dirname "$0")"
+clear
+echo "====================================="
+echo " KURSAD40 V30 ALT_GZ"
+echo " Mission Executor"
+echo "====================================="
+echo ""
+../../.venv/bin/python -u process_manager.py start_mission "$@"

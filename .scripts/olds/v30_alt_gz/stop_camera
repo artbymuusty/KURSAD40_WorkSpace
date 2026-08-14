@@ -1,0 +1,7 @@
+#!/bin/bash
+# stop_camera - Utility to gracefully shutdown the background Camera Service
+
+# Ensure we are in the directory of the script
+cd "$(dirname "$0")"
+
+python camera_manager.py stop

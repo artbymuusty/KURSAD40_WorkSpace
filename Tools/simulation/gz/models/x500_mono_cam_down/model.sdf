@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version='1.9'>
+  <model name='x500_mono_cam_down'>
+    <self_collide>false</self_collide>
+    <include merge='true'>
+      <uri>x500</uri>
+    </include>
+
+
+<!-- ===================== DUMMY BLUE (sağ / right side) ===================== -->
+<!--
+  PLACEMENT FIX: was Y=0 Z=-0.30 vs red's Y=0 Z=-0.35, i.e. stacked directly
+  on top of each other on the vertical centerline. Real payload mounting is
+  symmetric left/right at the same height, so both links now share Z=-0.32
+  and only differ in Y. base_link follows PX4's standard body frame
+  (Forward-X, Right-Y, Down-Z), so +Y is the vehicle's RIGHT side and -Y is
+  LEFT: blue is at +0.20 (right), red is at -0.20 (left).
+
+  RESTORE NOTE: an earlier pass here mistakenly assumed the compiled
+  PayloadDropSystem plugin worked by removing this link's own fixed joint,
+  and changed gravity/mass/collision/self_collide accordingly. The actually
+  compiled plugin (src/modules/simulation/gz_plugins/payload_drop, verified
+  against the built .so's own path) works completely differently: it finds
+  this dummy link BY NAME, removes only its <visual>/<collision> on drop,
+  and spawns a brand new independent falling model via the world "create"
+  service: this link itself stays fixed-jointed to base_link forever, it
+  never becomes dynamic. None of gravity/mass/collision/self_collide here
+  matter to that mechanism, so this is back to its original simple form.
+-->
+<link name="payload_blue_link">
+  <pose relative_to="base_link">0 0.20 -0.32 0 0 0</pose>
+  <gravity>false</gravity>
+
+  <inertial>
+    <mass>0.001</mass>
+    <inertia>
+      <ixx>1e-6</ixx> <iyy>1e-6</iyy> <izz>1e-6</izz>
+      <ixy>0</ixy> <ixz>0</ixz> <iyz>0</iyz>
+    </inertia>
+  </inertial>
+
+  <visual name="payload_blue_visual">
+    <geometry>
+      <box>
+        <size>0.3 0.225 0.05</size>
+      </box>
+    </geometry>
+    <material>
+      <diffuse>0 0 1 1</diffuse>
+      <ambient>0 0 1 1</ambient>
+    </material>
+  </visual>
+</link>
+
+<joint name="payload_blue_dummy_joint" type="fixed">
+  <parent>base_link</parent>
+  <child>payload_blue_link</child>
+</joint>
+
+
+<!-- ===================== DUMMY RED (sol / left side) ===================== -->
+<link name="payload_red_link">
+  <pose relative_to="base_link">0 -0.20 -0.32 0 0 0</pose>
+  <gravity>false</gravity>
+
+  <inertial>
+    <mass>0.001</mass>
+    <inertia>
+      <ixx>1e-6</ixx> <iyy>1e-6</iyy> <izz>1e-6</izz>
+      <ixy>0</ixy> <ixz>0</ixz> <iyz>0</iyz>
+    </inertia>
+  </inertial>
+
+  <visual name="payload_red_visual">
+    <geometry>
+      <box>
+        <size>0.3 0.225 0.05</size>
+      </box>
+    </geometry>
+    <material>
+      <diffuse>1 0 0 1</diffuse>
+      <ambient>1 0 0 1</ambient>
+    </material>
+  </visual>
+</link>
+
+<joint name="payload_red_dummy_joint" type="fixed">
+  <parent>base_link</parent>
+  <child>payload_red_link</child>
+</joint>
+
+
+<!--
+  RESTORE: an earlier pass here was based on reading the WRONG plugin source
+  file (Tools/simulation/gz/plugins/payload_drop, a simpler joint-removal
+  stub in the gz submodule) and concluded these parameters were dead,
+  replacing this block with two joint_name-based plugin instances. The
+  plugin that is ACTUALLY compiled and loaded is
+  src/modules/simulation/gz_plugins/payload_drop/payload_drop_system.cc
+  (confirmed by tracing the built libPayloadDropSystem.so's own path back to
+  that source directory), and it is a completely different, working
+  "SDF-spawn" design:
+    - single shared <topic> (default "/payload_drop", matching
+      .scripts/denemePayload.py's known-working manual test trigger)
+    - finds <uav_model>/<uav_link> and the two dummy links by name
+    - on each drop request, removes only the relevant dummy's visual +
+      collision (the dummy link/joint stays, it never becomes dynamic
+      itself) and spawns a brand new, independent, physically dynamic
+      payload model via the world "create" service at the dummy's world
+      pose + the given offset
+    - sequences RED first (stage 0), then BLUE (stage 1), then ignores
+      further requests (stage 2). It does not read which color the
+      caller intends from the topic/message at all, the caller (payload.py)
+      only ever needs to say "drop" once per payload, in order
+  This restores the original single-instance configuration with the real
+  parameter set.
+-->
+<plugin filename="libPayloadDropSystem.so" name="payload::PayloadDropSystem">
+  <topic>/payload_drop</topic>
+  <output_topic>/payload_drop_state</output_topic>
+  <world_name>default</world_name>
+
+  <uav_model>x500_mono_cam_down_0</uav_model>
+  <uav_link>base_link</uav_link>
+
+  <dummy_payload_link_red>payload_red_link</dummy_payload_link_red>
+  <offset_red_x>0</offset_red_x>
+  <offset_red_y>0</offset_red_y>
+  <offset_red_z>-0.55</offset_red_z>
+
+  <dummy_payload_link_blue>payload_blue_link</dummy_payload_link_blue>
+  <offset_blue_x>0</offset_blue_x>
+  <offset_blue_y>0</offset_blue_y>
+  <offset_blue_z>-0.50</offset_blue_z>
+
+  <spawn_name_prefix>payload_drop_</spawn_name_prefix>
+
+  <radius>0.15</radius>
+  <length>0.05</length>
+  <mass>0.85</mass>
+</plugin>
+
+
+
+    <include merge='true'>
+      <uri>model://mono_cam</uri>
+      <pose>0.35 0 .05 0 1.5707 0</pose>
+      <name>mono_cam</name>
+    </include>
+    <joint name="CameraJoint" type="fixed">
+      <parent>base_link</parent>
+      <child>camera_link</child>
+      <pose relative_to="base_link">0 0 0 0 1.5707 0</pose>
+    </joint>
+  </model>
+</sdf>

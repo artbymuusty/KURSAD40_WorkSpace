@@ -1,0 +1,8 @@
+#!/bin/bash
+# restart_mission_v30_alt_gz - Mission Restart Script
+
+cd "$(dirname "$0")"
+echo "Restarting KURSAD40 V30 ALT_GZ Mission..."
+./stop_mission_v30_alt_gz
+sleep 1
+./run_mission_v30_alt_gz "$@"

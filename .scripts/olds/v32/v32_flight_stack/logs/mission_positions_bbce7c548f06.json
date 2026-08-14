@@ -1,0 +1,20 @@
+[
+    {
+        "shape_type": "MAVI_ALTIGEN",
+        "gps_lat": 47.3981018,
+        "gps_lon": 8.5461643,
+        "gps_alt": 14.988000869750977,
+        "detection_order": "ilk",
+        "timestamp": 1786635851.5161548,
+        "payload_released": true
+    },
+    {
+        "shape_type": "KIRMIZI_UCGEN",
+        "gps_lat": 47.3983299,
+        "gps_lon": 8.5461651,
+        "gps_alt": 14.994000434875488,
+        "detection_order": "ikinci",
+        "timestamp": 1786635928.5159,
+        "payload_released": true
+    }
+]

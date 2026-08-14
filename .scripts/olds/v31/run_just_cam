@@ -1,0 +1,11 @@
+#!/bin/bash
+# run_just_cam - Ground Station Camera Viewer Launcher
+
+cd "$(dirname "$0")"
+clear
+echo "====================================="
+echo " KURSAD40 V30"
+echo " Ground Station Viewer"
+echo "====================================="
+echo ""
+../../.venv/bin/python process_manager.py foreground_cam

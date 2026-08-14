@@ -1,0 +1,11 @@
+#!/bin/bash
+# run_mission_v30 - Mission Executor Launcher
+
+cd "$(dirname "$0")"
+clear
+echo "====================================="
+echo " KURSAD40 V30"
+echo " Mission Executor"
+echo "====================================="
+echo ""
+../../.venv/bin/python -u process_manager.py start_mission "$@"

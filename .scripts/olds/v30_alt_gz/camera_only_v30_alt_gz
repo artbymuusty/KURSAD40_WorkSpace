@@ -1,0 +1,6 @@
+#!/bin/bash
+# camera_only_v30_alt_gz - Camera Subsystem Launcher
+
+cd "$(dirname "$0")"
+echo "Starting KURSAD40 V30 ALT_GZ Camera Subsystem..."
+../../.venv/bin/python process_manager.py start_cam

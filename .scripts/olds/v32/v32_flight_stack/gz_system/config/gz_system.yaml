@@ -1,0 +1,20 @@
+flight_backend:
+  connection_string: "udp://:14540"
+camera:
+  # BUG FIX: was "/camera/image_raw" -- not a real Gazebo topic for this
+  # simulation (gz_camera_source.py's auto-discovery via `gz topic -l`
+  # would fall back to this and find nothing, producing zero frames). This
+  # matches the real gz-transport topic convention V30/V31 used
+  # successfully; auto-discovery still covers other model-name variants.
+  ros2_topic: "/world/default/model/x500_mono_cam_down_0/link/camera_link/sensor/camera/image"
+  zmq_address: "tcp://127.0.0.1:5555"
+control_gains:
+  kp_horizontal: 0.5
+  kp_vertical: 0.3
+  kp_altitude: 0.5
+  # Operator-specified centering precision (2026-08-13 revision): ±0.01
+  # normalized in both axes.
+  centering_tolerance_x: 0.01
+  centering_tolerance_y: 0.01
+actuator:
+  gazebo_service_name: "/v32/set_payload_state"

@@ -1,0 +1,505 @@
+[DEBUG] config.py loaded.
+[INIT] Running in SIM_MODE.
+[DEBUG] main.py process starts. PID: 11055
+[CAMERA_CLIENT] Connecting to ZMQ publisher at tcp://127.0.0.1:5555...[INIT] Camera client listening on tcp://127.0.0.1:5555
+[INIT] Booting Mission Core Architecture...
+
+[CAMERA_CLIENT] Connected. Waiting for frames...
+[VISION_WORKER] Started Vision Pipeline.
+[INIT] Waiting for MAVSDK connection at udpin://0.0.0.0:14540 ...
+[MAVSDK] Connected.
+[INIT] MAVSDK Connected.
+[UI_WORKER] Started Dashboard thread.
+[INIT] All modules initialized. Starting 33Hz Flight Loop.
+[MISSION] MISSION 1 STARTED
+[CAMERA_CLIENT] Received at 31.2 FPS | Shape: (960, 1280, 3) | ts: 1783953068.21
+Warning: Ignoring XDG_SESSION_TYPE=wayland on Gnome. Use QT_QPA_PLATFORM=wayland to run on Wayland anyway.
+QFontDatabase: Cannot find font directory /home/muusty/autokursad/.scripts/.venv/lib/python3.12/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/muusty/autokursad/.scripts/.venv/lib/python3.12/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/muusty/autokursad/.scripts/.venv/lib/python3.12/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/muusty/autokursad/.scripts/.venv/lib/python3.12/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/muusty/autokursad/.scripts/.venv/lib/python3.12/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+[MISSION] STATE TRANSITION: BOOT -> INITIALIZATION (System Booted.)
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953069.22
+[MISSION] STATE TRANSITION: INITIALIZATION -> ARM_OFFBOARD (Telemetry valid. Arming and entering OFFBOARD.)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+Received ack for not-existing command: 176! Ignoring... (mavlink_command_sender.cpp:304)
+[MISSION] STATE TRANSITION: ARM_OFFBOARD -> TAKEOFF (Armed and in OFFBOARD.)
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953070.25
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953071.26
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 369.9 FPS | Tracker: 1000.0 FPS | Latency: 2.7ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953072.27
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953073.29
+[CAMERA_CLIENT] Received at 27.6 FPS | Shape: (960, 1280, 3) | ts: 1783953074.31
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953075.32
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953076.34
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 237.9 FPS | Tracker: 1000.0 FPS | Latency: 4.2ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953077.35
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953078.37
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953079.38
+[MISSION] WARNING: start position captured after 4.0s settle timeout without full stabilization.
+[MISSION] ==============================
+[MISSION] MISSION START POSITION SAVED
+[MISSION]   N:   0.013
+[MISSION]   E:   -0.190
+[MISSION]   ALT: 2.850
+[MISSION]   YAW: 93.8
+[MISSION] ==============================
+[MISSION] STATE TRANSITION: TAKEOFF -> ASCEND_TO_SEARCH_ALTITUDE (Takeoff altitude reached, start position saved.)
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953080.41
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953081.43
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 492.0 FPS | Tracker: 1000.0 FPS | Latency: 2.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.3 FPS | Shape: (960, 1280, 3) | ts: 1783953082.45
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953083.48
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953084.51
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953085.52
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953086.54
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 278.0 FPS | Tracker: 1000.0 FPS | Latency: 3.6ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953087.56
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953088.59
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953089.62
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953090.64
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953091.65
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 446.5 FPS | Tracker: 1000.0 FPS | Latency: 2.2ms | Valid: 0.0%
+[MISSION] STATE TRANSITION: ASCEND_TO_SEARCH_ALTITUDE -> SEARCH (Search altitude reached.)
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953092.67
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953093.70
+[MISSION] STATE TRANSITION: SEARCH -> TARGET_DETECTED (Target spotted.)
+[MISSION] STATE TRANSITION: TARGET_DETECTED -> TARGET_TRACKING (Target Locked.)
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953094.73
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953095.73
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953096.74
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 217.7 FPS | Tracker: 1000.0 FPS | Latency: 4.6ms | Valid: 57.1%
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953097.77
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953098.77
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953099.80
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953100.81
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953101.83
+[VISION_PERF] Pipeline FPS: 29.6 | Inference: 227.7 FPS | Tracker: 1000.0 FPS | Latency: 4.4ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953102.84
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953103.84
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953104.87
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953105.89
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953106.90
+[VISION_PERF] Pipeline FPS: 29.7 | Inference: 268.9 FPS | Tracker: 1000.0 FPS | Latency: 3.8ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953107.93
+[MISSION] STATE TRANSITION: TARGET_TRACKING -> PRECISION_ALIGNMENT (Aligned.)
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953108.94
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953109.94
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953110.99
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953112.01
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 164.8 FPS | Tracker: 1000.0 FPS | Latency: 6.1ms | Valid: 100.0%
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 13.0m.)
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953113.02
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953114.03
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953115.04
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953116.06
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953117.06
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 11.0m.)
+[VISION_PERF] Pipeline FPS: 29.8 | Inference: 307.9 FPS | Tracker: 1000.0 FPS | Latency: 3.3ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953118.07
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953119.07
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953120.11
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953121.14
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 9.0m.)
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953122.17
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 365.8 FPS | Tracker: 1000.0 FPS | Latency: 2.8ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953123.21
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953124.21
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953125.23
+[CAMERA_CLIENT] Received at 28.4 FPS | Shape: (960, 1280, 3) | ts: 1783953126.25
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 7.0m.)
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953127.25
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 253.5 FPS | Tracker: 1000.0 FPS | Latency: 4.1ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 28.2 FPS | Shape: (960, 1280, 3) | ts: 1783953128.28
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953129.30
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953130.30
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953131.31
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 5.0m.)
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953132.34
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 374.7 FPS | Tracker: 1000.0 FPS | Latency: 2.7ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 28.4 FPS | Shape: (960, 1280, 3) | ts: 1783953133.36
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953134.38
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953135.38
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953136.40
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 3.0m.)
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 171.5 FPS | Tracker: 1000.0 FPS | Latency: 5.9ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 28.4 FPS | Shape: (960, 1280, 3) | ts: 1783953137.42
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953138.44
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953139.45
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953140.47
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> PAYLOAD_DROP (Final alignment complete.)
+[PAYLOAD] Selected RED payload for blue hexagon
+[PAYLOAD] Inventory before drop request: {'red': True, 'blue': True}
+[PAYLOAD] Selected payload color: red. Publishing Gazebo boolean drop on /payload_drop: true
+[PAYLOAD] Discarded 1426 stale hook/drop message(s) before waiting.
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953141.48
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 157.4 FPS | Tracker: 1000.0 FPS | Latency: 6.5ms | Valid: 100.0%
+[PAYLOAD] Gazebo drop command published; waiting for plugin's DROP_STATE confirmation...
+[PAYLOAD] DROP_STATE confirmed: red spawned successfully in Gazebo. Inventory after drop: {'red': False, 'blue': True}
+[MEMORY] First drop saved: payload=red, target=blue_hexagon, ned=(0.019321484491229057, 14.620203971862793, -3.1646525859832764)
+[MEMORY] Target 'blue_hexagon' marked as completed.
+[MEMORY] Drop CONFIRMED for payload 'red'. confirmed_drops=['red']
+[MISSION] STATE TRANSITION: PAYLOAD_DROP -> ASCEND_AFTER_DROP (Payload drop resolved. Target disabled.)
+[CAMERA_CLIENT] Received at 27.9 FPS | Shape: (960, 1280, 3) | ts: 1783953142.52
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953143.52
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953144.53
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953145.54
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953146.54
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 2.7%
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953147.56
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953148.57
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953149.58
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953150.58
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953151.60
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.1 FPS | Shape: (960, 1280, 3) | ts: 1783953152.63
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953153.65
+[MISSION] STATE TRANSITION: ASCEND_AFTER_DROP -> SEARCH_RESUME (First drop complete. Resume search.)
+[MISSION] STATE TRANSITION: SEARCH_RESUME -> SEARCH (Resuming search pattern.)
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953154.66
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953155.68
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953156.68
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 267.9 FPS | Tracker: 1000.0 FPS | Latency: 3.8ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953157.71
+[MISSION] STATE TRANSITION: SEARCH -> TARGET_DETECTED (Target spotted.)
+[MISSION] STATE TRANSITION: TARGET_DETECTED -> TARGET_TRACKING (Target Locked.)
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953158.73
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953159.77
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953160.80
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953161.82
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 307.8 FPS | Tracker: 1000.0 FPS | Latency: 3.3ms | Valid: 76.0%
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953162.83
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953163.85
+[CAMERA_CLIENT] Received at 28.3 FPS | Shape: (960, 1280, 3) | ts: 1783953164.88
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953165.90
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953166.91
+[VISION_PERF] Pipeline FPS: 28.8 | Inference: 237.7 FPS | Tracker: 1000.0 FPS | Latency: 4.3ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953167.91
+[CAMERA_CLIENT] Received at 27.8 FPS | Shape: (960, 1280, 3) | ts: 1783953168.92
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953169.93
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953170.94
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953171.96
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 248.6 FPS | Tracker: 1000.0 FPS | Latency: 4.1ms | Valid: 99.3%
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953172.99
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953174.00
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953175.03
+[MISSION] STATE TRANSITION: TARGET_TRACKING -> PRECISION_ALIGNMENT (Aligned.)
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953176.03
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953177.04
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 248.7 FPS | Tracker: 1000.0 FPS | Latency: 4.1ms | Valid: 98.6%
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953178.05
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953179.08
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 13.0m.)
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953180.12
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953181.14
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953182.14
+[VISION_PERF] Pipeline FPS: 29.2 | Inference: 274.6 FPS | Tracker: 1000.0 FPS | Latency: 3.7ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 27.7 FPS | Shape: (960, 1280, 3) | ts: 1783953183.15
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953184.15
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 11.0m.)
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953185.16
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953186.17
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953187.18
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 175.9 FPS | Tracker: 1000.0 FPS | Latency: 5.7ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 28.3 FPS | Shape: (960, 1280, 3) | ts: 1783953188.20
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 9.0m.)
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953189.22
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953190.26
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953191.26
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953192.29
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 212.0 FPS | Tracker: 1000.0 FPS | Latency: 4.7ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 26.1 FPS | Shape: (960, 1280, 3) | ts: 1783953193.32
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 7.0m.)
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953194.34
+[CAMERA_CLIENT] Received at 28.3 FPS | Shape: (960, 1280, 3) | ts: 1783953195.37
+[CAMERA_CLIENT] Received at 30.1 FPS | Shape: (960, 1280, 3) | ts: 1783953196.40
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953197.43
+[VISION_PERF] Pipeline FPS: 28.7 | Inference: 186.8 FPS | Tracker: 1000.0 FPS | Latency: 5.4ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953198.44
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 5.0m.)
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953199.46
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953200.47
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953201.49
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953202.54
+[VISION_PERF] Pipeline FPS: 29.2 | Inference: 148.5 FPS | Tracker: 1000.0 FPS | Latency: 6.9ms | Valid: 100.0%
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> STEP_DESCENT (Descending to 3.0m.)
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953203.56
+[CAMERA_CLIENT] Received at 28.1 FPS | Shape: (960, 1280, 3) | ts: 1783953204.59
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953205.62
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953206.62
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 143.1 FPS | Tracker: 1000.0 FPS | Latency: 7.0ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953207.65
+[MISSION] STATE TRANSITION: STEP_DESCENT -> PRECISION_ALIGNMENT (Gate reached. Re-aligning.)
+[MISSION] STATE TRANSITION: PRECISION_ALIGNMENT -> PAYLOAD_DROP (Final alignment complete.)
+[PAYLOAD] Selected BLUE payload for red triangle
+[PAYLOAD] Inventory before drop request: {'red': False, 'blue': True}
+[PAYLOAD] Selected payload color: blue. Publishing Gazebo boolean drop on /payload_drop: true
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953208.69
+[PAYLOAD] Gazebo drop command published; waiting for plugin's DROP_STATE confirmation...
+[PAYLOAD] DROP_STATE confirmed: blue spawned successfully in Gazebo. Inventory after drop: {'red': False, 'blue': False}
+[MEMORY] Second drop saved: payload=blue, target=red_triangle, ned=(0.326982706785202, 39.53367614746094, -3.159295082092285)
+[MEMORY] Target 'red_triangle' marked as completed.
+[MEMORY] Drop CONFIRMED for payload 'blue'. confirmed_drops=['red', 'blue']
+[MISSION] STATE TRANSITION: PAYLOAD_DROP -> ASCEND_AFTER_DROP (Payload drop resolved. Target disabled.)
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953209.69
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953210.71
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953211.73
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 29.5%
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953212.76
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953213.77
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953214.79
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953215.82
+[CAMERA_CLIENT] Received at 28.2 FPS | Shape: (960, 1280, 3) | ts: 1783953216.85
+[VISION_PERF] Pipeline FPS: 29.0 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953217.87
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953218.90
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953219.92
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953220.92
+[MISSION] MISSION 1 COMPLETE
+[MISSION] SECOND MISSION COMPLETE
+[MISSION] MISSION 2 STARTED
+[MISSION] STATE TRANSITION: ASCEND_AFTER_DROP -> PICKUP_PREPARATION (Both drops completed and confirmed. Bonus pickup enabled -- heading to pickup.)
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953221.94
+[VISION_PERF] Pipeline FPS: 29.6 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953222.96
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953223.97
+[CAMERA_CLIENT] Received at 30.2 FPS | Shape: (960, 1280, 3) | ts: 1783953225.00
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953226.03
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953227.06
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953228.09
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953229.12
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953230.17
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953231.19
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953232.22
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.1ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953233.27
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953234.29
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953235.31
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953236.32
+[MISSION] STATE TRANSITION: PICKUP_PREPARATION -> PICKUP (Reached safe hover altitude above Drop1. Simulating grab.)
+[PAYLOAD] Virtual pickup: red payload treated as grabbed (no ground contact, no physics joint -- pure mission-state change).
+[MISSION] Simulating payload grab (3.0s hold)...
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953237.33
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953238.35
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953239.38
+[MISSION] Payload Picked
+[MISSION] STATE TRANSITION: PICKUP -> PAYLOAD_TRANSFER (Virtual pickup complete. Proceeding to delivery.)
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953240.39
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953241.41
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953242.42
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953243.46
+[CAMERA_CLIENT] Received at 30.1 FPS | Shape: (960, 1280, 3) | ts: 1783953244.49
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953245.49
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953246.50
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953247.52
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953248.53
+[CAMERA_CLIENT] Received at 27.9 FPS | Shape: (960, 1280, 3) | ts: 1783953249.53
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953250.55
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953251.58
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953252.59
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953253.61
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953254.62
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953255.65
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953256.67
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953257.68
+[VISION_PERF] Pipeline FPS: 29.1 | Inference: 1000.0 FPS | Tracker: 1000.0 FPS | Latency: 0.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953258.69
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953259.71
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953260.73
+[MISSION] Arrived near Drop2. Re-enabling vision for 'red_triangle'.
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953261.74
+[MISSION] STATE TRANSITION: PAYLOAD_TRANSFER -> PAYLOAD_RELEASE (Visual servo aligned over Drop2. Descending to release.)
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953262.75
+[VISION_PERF] Pipeline FPS: 28.8 | Inference: 202.1 FPS | Tracker: 1000.0 FPS | Latency: 5.0ms | Valid: 33.1%
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953263.75
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953264.75
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953265.78
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953266.80
+[MISSION] Reached drop altitude (1.0m AGL) over Drop2.
+[MISSION] Requesting virtual payload release...
+[PAYLOAD] Virtual release: red payload (virtual_red) considered delivered -- no physics joint to detach.
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953267.82
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 275.9 FPS | Tracker: 1000.0 FPS | Latency: 3.7ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953268.84
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953269.88
+[MISSION] Payload Delivered
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953270.89
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953271.92
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 267.6 FPS | Tracker: 1000.0 FPS | Latency: 3.8ms | Valid: 100.0%
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953272.95
+[MISSION] MISSION 2 COMPLETE
+[MISSION] MISSION 3 STARTED
+[MISSION] STATE TRANSITION: PAYLOAD_RELEASE -> VERIFY_APPROACH_1 (Payload delivered. Starting Mission 3 verification.)
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953273.95
+[CAMERA_CLIENT] Received at 26.8 FPS | Shape: (960, 1280, 3) | ts: 1783953274.95
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953275.98
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953277.01
+[VISION_PERF] Pipeline FPS: 28.3 | Inference: 462.2 FPS | Tracker: 1000.0 FPS | Latency: 2.2ms | Valid: 35.2%
+[CAMERA_CLIENT] Received at 28.4 FPS | Shape: (960, 1280, 3) | ts: 1783953278.03
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953279.07
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953280.08
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953281.09
+[MISSION] STATE TRANSITION: VERIFY_APPROACH_1 -> VERIFY_1 (Reached blue_hexagon verification point.)
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953282.11
+[VISION_PERF] Pipeline FPS: 28.9 | Inference: 538.8 FPS | Tracker: 1000.0 FPS | Latency: 1.9ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 27.7 FPS | Shape: (960, 1280, 3) | ts: 1783953283.12
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953284.14
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953285.15
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953286.19
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953287.20
+[VISION_PERF] Pipeline FPS: 29.5 | Inference: 317.3 FPS | Tracker: 1000.0 FPS | Latency: 3.2ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953288.21
+[CAMERA_CLIENT] Received at 29.0 FPS | Shape: (960, 1280, 3) | ts: 1783953289.25
+[CAMERA_CLIENT] Received at 28.8 FPS | Shape: (960, 1280, 3) | ts: 1783953290.29
+[CAMERA_CLIENT] Received at 27.8 FPS | Shape: (960, 1280, 3) | ts: 1783953291.29
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953292.30
+[VISION_PERF] Pipeline FPS: 28.8 | Inference: 392.7 FPS | Tracker: 1000.0 FPS | Latency: 2.6ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953293.31
+[CAMERA_CLIENT] Received at 28.3 FPS | Shape: (960, 1280, 3) | ts: 1783953294.33
+[CAMERA_CLIENT] Received at 28.4 FPS | Shape: (960, 1280, 3) | ts: 1783953295.35
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953296.40
+[CAMERA_CLIENT] Received at 30.1 FPS | Shape: (960, 1280, 3) | ts: 1783953297.43
+[VISION_PERF] Pipeline FPS: 29.3 | Inference: 553.0 FPS | Tracker: 1000.0 FPS | Latency: 1.8ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953298.43
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953299.44
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953300.45
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953301.49
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953302.49
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 441.4 FPS | Tracker: 1000.0 FPS | Latency: 2.3ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.4 FPS | Shape: (960, 1280, 3) | ts: 1783953303.51
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953304.54
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953305.55
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953306.59
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953307.59
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 492.6 FPS | Tracker: 1000.0 FPS | Latency: 2.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953308.63
+[CAMERA_CLIENT] Received at 29.1 FPS | Shape: (960, 1280, 3) | ts: 1783953309.66
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953310.67
+[CAMERA_CLIENT] Received at 28.5 FPS | Shape: (960, 1280, 3) | ts: 1783953311.69
+[CAMERA_CLIENT] Received at 30.4 FPS | Shape: (960, 1280, 3) | ts: 1783953312.71
+[VISION_PERF] Pipeline FPS: 29.4 | Inference: 477.4 FPS | Tracker: 1000.0 FPS | Latency: 2.1ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.3 FPS | Shape: (960, 1280, 3) | ts: 1783953313.74
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953314.75
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953315.76
+[CAMERA_CLIENT] Received at 27.7 FPS | Shape: (960, 1280, 3) | ts: 1783953316.77
+[CAMERA_CLIENT] Received at 27.2 FPS | Shape: (960, 1280, 3) | ts: 1783953317.80
+[VISION_PERF] Pipeline FPS: 28.4 | Inference: 500.9 FPS | Tracker: 1000.0 FPS | Latency: 2.0ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 26.9 FPS | Shape: (960, 1280, 3) | ts: 1783953318.80
+[CAMERA_CLIENT] Received at 28.0 FPS | Shape: (960, 1280, 3) | ts: 1783953319.80
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953320.84
+[CAMERA_CLIENT] Received at 26.4 FPS | Shape: (960, 1280, 3) | ts: 1783953321.87
+[CAMERA_CLIENT] Received at 28.9 FPS | Shape: (960, 1280, 3) | ts: 1783953322.87
+[VISION_PERF] Pipeline FPS: 28.0 | Inference: 463.0 FPS | Tracker: 1000.0 FPS | Latency: 2.2ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953323.88
+[CAMERA_CLIENT] Received at 29.9 FPS | Shape: (960, 1280, 3) | ts: 1783953324.92
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953325.95
+[CAMERA_CLIENT] Received at 29.5 FPS | Shape: (960, 1280, 3) | ts: 1783953326.97
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953327.97
+[VISION_PERF] Pipeline FPS: 29.8 | Inference: 484.4 FPS | Tracker: 1000.0 FPS | Latency: 2.1ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.6 FPS | Shape: (960, 1280, 3) | ts: 1783953328.98
+[CAMERA_CLIENT] Received at 27.9 FPS | Shape: (960, 1280, 3) | ts: 1783953329.98
+[CAMERA_CLIENT] Received at 29.8 FPS | Shape: (960, 1280, 3) | ts: 1783953330.99
+[CAMERA_CLIENT] Received at 30.0 FPS | Shape: (960, 1280, 3) | ts: 1783953332.02
+[CAMERA_CLIENT] Received at 28.7 FPS | Shape: (960, 1280, 3) | ts: 1783953333.03
+[VISION_PERF] Pipeline FPS: 29.2 | Inference: 409.5 FPS | Tracker: 1000.0 FPS | Latency: 2.5ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 29.7 FPS | Shape: (960, 1280, 3) | ts: 1783953334.04
+[CAMERA_CLIENT] Received at 27.9 FPS | Shape: (960, 1280, 3) | ts: 1783953335.04
+[CAMERA_CLIENT] Received at 28.6 FPS | Shape: (960, 1280, 3) | ts: 1783953336.06
+[CAMERA_CLIENT] Received at 27.7 FPS | Shape: (960, 1280, 3) | ts: 1783953337.07
+[CAMERA_CLIENT] Received at 28.1 FPS | Shape: (960, 1280, 3) | ts: 1783953338.10
+[VISION_PERF] Pipeline FPS: 28.4 | Inference: 288.3 FPS | Tracker: 1000.0 FPS | Latency: 3.5ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 26.6 FPS | Shape: (960, 1280, 3) | ts: 1783953339.12
+[CAMERA_CLIENT] Received at 25.7 FPS | Shape: (960, 1280, 3) | ts: 1783953340.13
+[CAMERA_CLIENT] Received at 28.1 FPS | Shape: (960, 1280, 3) | ts: 1783953341.16
+[CAMERA_CLIENT] Received at 29.2 FPS | Shape: (960, 1280, 3) | ts: 1783953342.19
+[VISION_PERF] Pipeline FPS: 27.3 | Inference: 175.0 FPS | Tracker: 1000.0 FPS | Latency: 5.7ms | Valid: 0.0%
+[CAMERA_CLIENT] Received at 27.9 FPS | Shape: (960, 1280, 3) | ts: 1783953343.20
+[CAMERA_CLIENT] WARNING: Frame stream is stale. Reconnecting...
+[CAMERA_CLIENT] Recreating ZMQ socket for tcp://127.0.0.1:5555...
+[CAMERA_CLIENT] Reconnection successful.
+[CAMERA_CLIENT] WARNING: Frame stream is stale. Reconnecting...
+[CAMERA_CLIENT] Recreating ZMQ socket for tcp://127.0.0.1:5555...
+[CAMERA_CLIENT] Reconnection successful.
+[CAMERA_CLIENT] WARNING: Frame stream is stale. Reconnecting...
+[CAMERA_CLIENT] Recreating ZMQ socket for tcp://127.0.0.1:5555...
+[CAMERA_CLIENT] Reconnection successful.
+[CAMERA_CLIENT] WARNING: Frame stream is stale. Reconnecting...
+[CAMERA_CLIENT] Recreating ZMQ socket for tcp://127.0.0.1:5555...
+[CAMERA_CLIENT] Reconnection successful.
+[INIT] Keyboard interrupt.
+[VISION_WORKER] Stopped Vision Pipeline.
+[CAMERA_CLIENT] Stopping client...
+[MAVSDK] Telemetry stream 'attitude_angular_velocity_body' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[MAVSDK] Telemetry stream 'position_velocity_ned' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[MAVSDK] Telemetry stream 'position' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[MAVSDK] Telemetry stream 'attitude_euler' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[MAVSDK] Telemetry stream 'flight_mode' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[MAVSDK] Telemetry stream 'armed' failed: <AioRpcError of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+	debug_error_string = "UNAVAILABLE:Stream removed (recvmsg:Bağlantı karşıdan kesildi)"
+>. Reconnecting in 1s...
+[CAMERA_CLIENT] Shutdown complete.
+[UI_WORKER] Stopped Dashboard thread.
+[INIT] Shutdown complete.

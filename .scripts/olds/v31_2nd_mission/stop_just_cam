@@ -1,0 +1,5 @@
+#!/bin/bash
+# stop_just_cam - Stops the Ground Station Viewer
+
+cd "$(dirname "$0")"
+../../.venv/bin/python process_manager.py stop_cam

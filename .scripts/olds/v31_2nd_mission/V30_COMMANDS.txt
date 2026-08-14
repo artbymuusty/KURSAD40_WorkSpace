@@ -1,0 +1,50 @@
+========================================
+KURSAD40 V30
+Mission Commands
+========================================
+
+Mission
+./run_mission_v30
+Complete autonomous mission.
+---
+Stop
+./stop_mission_v30
+Stops all mission processes.
+---
+Restart
+./restart_mission_v30
+Restarts mission.
+---
+Status
+./status_mission_v30
+Displays running services.
+---
+Camera Only
+./camera_only_v30
+Starts only the camera subsystem.
+---
+Health Check
+./health_check_v30
+Runs diagnostics.
+---
+Architecture
+PX4
+Gazebo Harmonic
+ProcessManager
+Camera Service
+Camera Client
+ZeroMQ
+Mission State Machine
+Navigation
+Waypoint Manager
+Telemetry
+Target Detection
+Target Tracking
+Coordinate Estimation
+Payload Controller
+Failsafe
+Ground Station
+Logging
+Configuration
+Health Monitor
+========================================

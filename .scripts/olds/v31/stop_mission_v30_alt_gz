@@ -1,0 +1,6 @@
+#!/bin/bash
+# stop_mission_v30_alt_gz - Mission Stop Script
+
+cd "$(dirname "$0")"
+echo "Stopping KURSAD40 V30 ALT_GZ Mission..."
+../../.venv/bin/python process_manager.py stop_mission

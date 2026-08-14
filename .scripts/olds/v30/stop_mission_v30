@@ -1,0 +1,6 @@
+#!/bin/bash
+# stop_mission_v30 - Mission Stop Script
+
+cd "$(dirname "$0")"
+echo "Stopping KURSAD40 V30 Mission..."
+../../.venv/bin/python process_manager.py stop_mission
