@@ -4,8 +4,19 @@
 cd "$(dirname "$0")"
 clear
 echo "====================================="
-echo " KURSAD40 V30"
+echo " KURSAD40 V32"
 echo " Ground Station Viewer"
 echo "====================================="
 echo ""
-../../.venv/bin/python process_manager.py foreground_cam
+# Shared gz-transport env (GZ_PARTITION/GZ_IP) -- must match the sim launcher.
+source "$(pwd)/v32_flight_stack/gz_system/gz_env.sh"
+
+source "$(dirname "$0")/resolve_python.sh"
+
+# Canonical pipeline: gz_system/camera_viewer.py drives GzCameraSource
+# (camera_service_manager + CameraClient) -- the same camera path the mission
+# uses. This previously called the flat legacy `process_manager.py`
+# foreground_cam stack, which ADR-005 identifies as superseded debris; those
+# files are left in place, they are simply no longer routed to.
+export PYTHONPATH="$(pwd)/v32_flight_stack${PYTHONPATH:+:$PYTHONPATH}"
+"$PYTHON_BIN" -u -m gz_system.camera_viewer

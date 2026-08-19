@@ -102,7 +102,7 @@
 
     <!-- 🔷 Kalıcı mavi altıgen (STL + klasik malzeme, kendi model.sdf'in) -->
     <include>
-      <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/models/blue_hexagon/model.sdf</uri>
+      <uri>model://blue_hexagon</uri>
       <name>blue_hexagon</name>
       <!-- X Y Z R P Y: 15m directly in front of the drone.
            BUG FIX (runtime investigation, 2026-08-13): this used to be
@@ -110,27 +110,136 @@
            and the px4-gz bridge maps PX4's local-NED north_m to this world's
            Y axis, not X. "15 0" therefore placed the model 15m EAST of the
            drone, not in front on the +N centerline the comment above (and
-           the file header) explicitly call for -- proven via a live MAVSDK
+           the file header) explicitly call for - proven via a live MAVSDK
            Offboard flight: commanding north=15 put the vehicle at world
            (0,15), 21m from the actual prop at (15,0), while commanding
            east=15 landed it exactly on top of the prop with a clean,
            correctly-classified MAVI_ALTIGEN detection dead-center in frame.
            Swapping X/Y puts the prop on the +N centerline as intended. -->
-      <pose>0 15 0.05 0 0 0</pose>
+      <!-- W1 (2026-08-17): z 0.05 -> 0.003. The mesh is FLAT (measured:
+           z = [0.0000, 0.0000] despite the "2cm" in its filename), so the
+           model pose IS the visual plane height - the target was floating
+           5 cm above the ground rather than painted on it. 3 mm keeps it
+           clear of ground_plane (z=0, no z-fighting) while sitting below
+           the height a released payload rests at (0.006 collision top +
+           0.025 half-length = 0.031). X/Y and the colours/scale are
+           unchanged, so the detector sees the same shape from the same
+           place. -->
+      <pose>0 15 0.003 0 0 0</pose>
     </include>
 
 
     <!-- 🔺 Kalıcı kırmızı üçgen -->
     <include>
-      <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/models/red_triangle/model.sdf</uri>
+      <uri>model://red_triangle</uri>
       <name>red_triangle</name>
       <!-- 40m directly in front of the drone, 25m past blue_hexagon.
            BUG FIX (runtime investigation, 2026-08-13): same X/Y axis
-           mix-up as blue_hexagon above -- "40 0" was 40m EAST, not north.
+           mix-up as blue_hexagon above - "40 0" was 40m EAST, not north.
            See the comment on blue_hexagon's <pose> for the full proof. -->
-      <pose>0 40 0.05 0 0 0</pose>
+      <!-- W1: same 0.05 -> 0.003 lift as blue_hexagon above. -->
+      <pose>0 40 0.003 0 0 0</pose>
     </include>
 
+
+
+    <!-- ADR-011: RED-servo (Mavi Altigen target) payload. Exists from world load and is held to the
+         x500 by a DetachableJoint (see the vehicle model). Mounted RIGHT (-y).
+
+         F2 (2026-08-17) MOVED THIS OUTBOARD, 0.20 -> 0.28 m, and down to
+         its exact resting height. The original 0.20 m put the payload's
+         volume (z [0.000,0.050], |y| [0.0875,0.3125]) straight through the
+         landing skid (z [0.0136,0.0286], |y| [0.1245,0.1395]). Nothing
+         pushed them apart while the DetachableJoint held, because DART
+         suppresses collision between joint-connected bodies, but the
+         instant the joint was removed the solver saw a deeply
+         interpenetrating pair and EJECTED the payload. That, not the
+         detach message, is what threw payload 2 to 4.9 m off the triangle
+         and left payload 1 standing on its edge. Clearance now needs
+         |y| >= 0.1395 + 0.1125 = 0.252; 0.28 leaves 2.8 cm.
+         z 0.06 -> 0.025 so the body starts exactly at rest on the ground
+         instead of dropping 3.5 cm while the joint is forming.
+         COST, recorded honestly: a side-mounted payload lands where its
+         MOUNT is, so centring the camera on the target now leaves a
+         systematic 0.28 m miss (was 0.20 m). See ADR-011.
+         Colour is TRUE RED (operator requirement, 2026-08-17 F1): the real
+         payload is red, and a stand-in hue would make every colour-based
+         observation in the sim untransferable. It therefore sits squarely
+         inside the detector's red mask (hue 0, S 238, V 191 vs the
+         [0,15]u[165,180] S>=40 V>=40 band) and separation from the arena
+         targets comes from SIZE, not colour: at the 15 m mission altitude
+         a 0.30x0.225 m prism projects to 10.8x8.1 px = 87 px2, against
+         HSV_MIN_AREA_TRI_BASE 390 and HSV_MIN_AREA_RECT_BASE 400, a 4.5x
+         margin. The gate is only reached below ~7 m altitude.
+         Cross-colour mapping helps too: this RED payload is dropped on the
+         BLUE hexagon, so a released payload never lies on a same-colour
+         target.
+         Mass 0.15 kg in simulation, NOT the real 1.05 kg: the sim x500 is a
+         2.07 kg airframe, and two real payloads (+2.1 kg, +101%) would push
+         thrust-to-weight and MPC_THR_HOVER far outside the tuning this SITL
+         model ships with. Real value is recorded in real_system.yaml. -->
+    <model name="payload_red">
+      <pose>0 -0.28 0.025 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.15</mass>
+          <inertia>
+            <ixx>0.00069</ixx><iyy>0.00116</iyy><izz>0.00176</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.30 0.225 0.05</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.30 0.225 0.05</size></box></geometry>
+          <material>
+            <ambient>0.75 0.05 0.05 1</ambient>
+            <diffuse>0.75 0.05 0.05 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ADR-011: BLUE-servo (Kirmizi Ucgen target) payload. Exists from world load and is held to the
+         x500 by a DetachableJoint (see the vehicle model). Mounted LEFT (+y).
+         Moved outboard to 0.28 m and down to its resting height for the
+         same reason as payload_red above (F2: it was mounted through the
+         landing skid, and detaching an interpenetrating pair ejects it).
+         Colour is TRUE BLUE (operator requirement, 2026-08-17 F1); see
+         payload_red above for the full rationale. Hue 118, S 238, V 191,
+         inside the detector's [90,140] blue mask; separation is by size
+         (87 px2 at 15 m vs HSV_MIN_AREA_HEX_BASE 800, a 9x margin).
+         Cross-colour mapping: this BLUE payload is dropped on the RED
+         triangle, so it never lies on a same-colour target.
+         Mass 0.15 kg in simulation, NOT the real 1.05 kg: the sim x500 is a
+         2.07 kg airframe, and two real payloads (+2.1 kg, +101%) would push
+         thrust-to-weight and MPC_THR_HOVER far outside the tuning this SITL
+         model ships with. Real value is recorded in real_system.yaml. -->
+    <model name="payload_blue">
+      <pose>0 0.28 0.025 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.15</mass>
+          <inertia>
+            <ixx>0.00069</ixx><iyy>0.00116</iyy><izz>0.00176</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.30 0.225 0.05</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.30 0.225 0.05</size></box></geometry>
+          <material>
+            <ambient>0.05 0.10 0.75 1</ambient>
+            <diffuse>0.05 0.10 0.75 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
 
     <!-- Sun -->
     <light name="sunUTC" type="directional">

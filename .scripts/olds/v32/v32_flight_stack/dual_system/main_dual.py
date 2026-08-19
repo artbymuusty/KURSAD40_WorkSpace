@@ -20,6 +20,7 @@ from gz_system.gz_payload_actuator import GzPayloadActuator
 
 from dual_system.dual_backend_adapter import DualFlightBackend, DualCameraSource, DualPayloadActuator
 
+from core.detection.detection_feed import DetectionFeed
 from core.detection.hsv_contour_detector import HSVContourDetector
 from core.detection.target_validator import TargetValidator
 from core.detection.target_selector import TargetSelector
@@ -93,7 +94,12 @@ async def _run(real_config: dict, gz_config: dict, mission_id: str) -> None:
         interlock = PayloadInterlock(publisher=publisher)
         checkpoint = MissionCheckpoint(publisher=publisher)
 
-        centering = CenteringController(flight, detector, camera, publisher=publisher)
+        # ADR-008 B1: one shared detection feed -- single producer
+        # (Gorev2Orchestrator._detection_loop), many consumers. See
+        # core/detection/detection_feed.py.
+        detection_feed = DetectionFeed()
+
+        centering = CenteringController(flight, detection_feed, camera, publisher=publisher)
         # Overwrite gains if provided (using real config as priority)
         centering.kp_horizontal = real_config["control_gains"]["kp_horizontal"]
         centering.kp_vertical = real_config["control_gains"]["kp_vertical"]
@@ -101,7 +107,8 @@ async def _run(real_config: dict, gz_config: dict, mission_id: str) -> None:
         centering.tolerance_x = real_config["control_gains"]["centering_tolerance_x"]
         centering.tolerance_y = real_config["control_gains"]["centering_tolerance_y"]
 
-        release_service = PayloadReleaseService(actuator, detector, camera, centering, flight, publisher=publisher)
+        release_service = PayloadReleaseService(actuator, detection_feed, camera, centering, flight,
+                                                publisher=publisher)
         sequencer = PayloadMissionSequencer(flight, centering, interlock, position_store, release_service,
                                              publisher=publisher)
 
@@ -111,6 +118,7 @@ async def _run(real_config: dict, gz_config: dict, mission_id: str) -> None:
             validator=validator, selector=selector, centering=centering, sequencer=sequencer,
             checkpoint=checkpoint, release_service=release_service,
             context=context, publisher=publisher, frame_channel=ops_center.frame_channel,
+            detection_feed=detection_feed,
         )
 
         pickup_phase = Gorev3PickupPhase(flight, camera, detector, actuator, position_store,
@@ -122,6 +130,8 @@ async def _run(real_config: dict, gz_config: dict, mission_id: str) -> None:
                                      context=context, publisher=publisher)
 
         master = MasterMissionController(gorev2, gorev3, context=context, publisher=publisher)
+        # ADR-008 B2 (A2 row 6): makes the mandatory 10-minute budget act.
+        ops_center.mission_timeout_hook = master.request_abort
         await master.run()
     finally:
         # ADR-004 §13 / §1: always torn down, even on failure -- the

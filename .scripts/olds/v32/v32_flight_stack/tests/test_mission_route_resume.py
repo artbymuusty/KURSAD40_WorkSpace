@@ -21,6 +21,8 @@ from core.detection.target_selector import TargetSelector
 from core.mission.debounce import DebounceTracker
 from core.position_log.position_store import PositionStore
 from core.mission.interlock import PayloadInterlock
+from core.detection.detection_feed import DetectionFeed
+from core.detection.vision_runtime import VisionRuntime
 from core.navigation.centering_controller import CenteringController
 from core.mission.payload_release import PayloadReleaseService
 from core.mission.gorev2_fsm import PayloadMissionSequencer
@@ -34,6 +36,7 @@ async def test_resume_mission_route_stops_offboard_then_starts_mission():
     orch = Gorev2Orchestrator.__new__(Gorev2Orchestrator)  # bypass full __init__, only need self.flight/self.publisher
     orch.flight = flight
     orch._search_complete = False
+    orch._last_resume_at = 0.0   # ADR-009: resume spacing state (bypassed __init__)
     from core.telemetry.event_bus import NULL_PUBLISHER
     orch.publisher = NULL_PUBLISHER
 
@@ -74,6 +77,7 @@ async def test_resume_mission_route_survives_stop_offboard_raising():
     orch = Gorev2Orchestrator.__new__(Gorev2Orchestrator)
     orch.flight = flight
     orch._search_complete = False
+    orch._last_resume_at = 0.0   # ADR-009: resume spacing state (bypassed __init__)
     from core.telemetry.event_bus import NULL_PUBLISHER
     orch.publisher = NULL_PUBLISHER
 
@@ -108,9 +112,12 @@ def _build_orchestrator(flight, detector, tmp_path, min_consecutive_frames=1):
     position_store = PositionStore(str(tmp_path / "positions.json"))
     interlock = PayloadInterlock()
     checkpoint = MissionCheckpoint()
-    centering = CenteringController(flight, detector, camera)
+    # ADR-008 B1: centering/verification consume the orchestrator's one
+    # detection loop through this feed; only the orchestrator gets the detector.
+    detection_feed = DetectionFeed()
+    centering = CenteringController(flight, detection_feed, camera)
     centering.lateral_timeout_s = 1.0  # keep the never-converges scenario fast
-    release_service = PayloadReleaseService(actuator, detector, camera, centering, flight)
+    release_service = PayloadReleaseService(actuator, detection_feed, camera, centering, flight)
     sequencer = PayloadMissionSequencer(flight, centering, interlock, position_store, release_service)
 
     return Gorev2Orchestrator(
@@ -118,6 +125,11 @@ def _build_orchestrator(flight, detector, tmp_path, min_consecutive_frames=1):
         interlock=interlock, position_store=position_store, debounce=debounce,
         validator=validator, selector=selector, centering=centering, sequencer=sequencer,
         checkpoint=checkpoint, release_service=release_service,
+        detection_feed=detection_feed,
+        # ADR-010 P3: vision now lives outside the orchestrator. These
+        # tests exercise Görev 2 alone, so they scope a runtime to this
+        # run; production (main_gz) owns one for the whole mission.
+        vision_runtime=VisionRuntime(camera, detector, detection_feed),
     )
 
 
@@ -138,10 +150,12 @@ async def test_failed_offboard_switch_resumes_the_paused_route(tmp_path):
     await asyncio.wait_for(asyncio.gather(orch.run(), end_soon()), timeout=10)
 
     start_mission_calls = [c for c in flight.calls if c[0] == 'start_mission']
-    # Operator starts the initial Mission themselves (this system never
-    # calls start_mission() for that step) -- the one call left here is the
-    # resume after the abandoned pursuit.
-    assert len(start_mission_calls) >= 1
+    # ADR-007: this system now issues the INITIAL start itself after its own
+    # takeoff (it previously waited for the operator), so start_mission() is
+    # called once at startup. The resume after the abandoned pursuit is
+    # therefore the SECOND call -- asserting >= 1 would be satisfied by the
+    # startup call alone and would no longer prove a resume happened.
+    assert len(start_mission_calls) >= 2
 
 
 @pytest.mark.asyncio
@@ -154,7 +168,11 @@ async def test_centering_timeout_resumes_the_paused_route(tmp_path):
         deadline = asyncio.get_event_loop().time() + 8.0
         while asyncio.get_event_loop().time() < deadline:
             start_mission_calls = [c for c in flight.calls if c[0] == 'start_mission']
-            if len(start_mission_calls) >= 1:
+            # ADR-007: call #1 is this system's own initial start after
+            # takeoff; the RESUME we are waiting for is call #2. Breaking on
+            # >= 1 would exit during startup, before the centering timeout
+            # had even happened.
+            if len(start_mission_calls) >= 2:
                 break
             await asyncio.sleep(0.1)
     finally:
@@ -165,5 +183,5 @@ async def test_centering_timeout_resumes_the_paused_route(tmp_path):
             pass
 
     start_mission_calls = [c for c in flight.calls if c[0] == 'start_mission']
-    assert len(start_mission_calls) >= 1, "route was never resumed after the centering timeout"
+    assert len(start_mission_calls) >= 2, "route was never resumed after the centering timeout"
     assert 'stop_offboard' in [c[0] for c in flight.calls]

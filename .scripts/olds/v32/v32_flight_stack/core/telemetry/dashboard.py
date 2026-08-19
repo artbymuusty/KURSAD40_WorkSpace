@@ -24,15 +24,20 @@ rebuilt to read from the new MissionSnapshot/FrameChannel sources instead
 of the old UISnapshot.
 """
 import logging
+import sys
 import threading
 import time
 from typing import Optional
 
 import numpy as np
 
+from core.config.parameters import (CENTERING_TOLERANCE_X_NORM, CENTERING_TOLERANCE_Y_NORM,
+                                    RELEASED_OVERLAY_DURATION_S)
+from core.detection.camera_intrinsics import default_camera_intrinsics
 from core.mission.blocking import BlockingKind
 from core.mission.phase import TERMINAL_PHASES
 from core.telemetry.aggregator import RuntimeStateAggregator
+from core.telemetry.paint_bridge import MAIN_THREAD_PAINT
 from core.telemetry.events import Severity
 from core.telemetry.frame_channel import FrameChannel, FrameSample
 from core.telemetry.snapshot import MissionSnapshot
@@ -58,6 +63,34 @@ COL_GOOD = (110, 220, 120)
 COL_WARN = (60, 210, 235)
 COL_BAD = (70, 70, 235)
 COL_CYAN = (235, 210, 70)
+# Lock indicator (operator request, 2026-08-16). BGR: the target->crosshair
+# vector is yellow while a pursuit is centring and black once the
+# CenteringController reports converged. Black reads as "settled/locked"
+# against this dashboard's dark-but-never-black panels and against the
+# camera feed's own bright arena colours; every other overlay element stays
+# a saturated hue, so it is unambiguous at a glance.
+COL_VECTOR = (0, 255, 255)
+COL_LOCKED = (0, 0, 0)
+# ADR-010 P5: every detected shape is stroked in the same green, whether it
+# came from a contour or (adapter fallback) a bounding box. Per-shape colours
+# are gone with the rectangles -- the shape's own outline already says which
+# shape it is, and the class label says it in words.
+COL_CONTOUR = (0, 255, 0)
+
+
+def _contour_points(detection):
+    """The detection's polygon as an int32 (N,2) array for cv2.polylines, or
+    None when the detector supplied no contour (see the adapter contract in
+    core/detection/types.py). Malformed or degenerate polygons return None
+    so the caller falls back to the bbox rather than raising inside a paint
+    loop -- the display must degrade, never crash."""
+    pts = getattr(detection, "contour_px", None)
+    if not pts or len(pts) < 3:
+        return None
+    try:
+        return np.array([[int(round(x)), int(round(y))] for x, y in pts], dtype=np.int32)
+    except (TypeError, ValueError):
+        return None
 
 _SEVERITY_COLOR = {
     Severity.DEBUG.value: COL_TEXT_DIM,
@@ -100,6 +133,28 @@ class MissionOpsDashboard:
         self._thread: Optional[threading.Thread] = None
         self._window_initialized = False
         self._headless = not _CV2_AVAILABLE
+
+        # macOS: compose here, paint on the main thread (ADR-006, implemented).
+        #
+        # Cocoa requires every cv2 GUI call on the process MAIN thread. ADR-005
+        # §3 requires this dashboard's state/composition/lifecycle to stay on
+        # its own dedicated thread, and its §8 table forbids "a direct cv2 call
+        # on this thread" for the MISSION thread. main_gz.py now runs the
+        # mission coroutine on a WORKER thread, so the main thread is free and
+        # is no longer the mission thread -- painting there satisfies Cocoa
+        # without putting cv2 anywhere near the mission. Everything this class
+        # does is unchanged; only the final imshow/waitKey is delegated, via a
+        # single-slot drop-oldest bridge so the dashboard never blocks on the
+        # painter.
+        #
+        # Linux/Windows are untouched: no bridge, paint on this thread as before.
+        self._delegate_paint = (not self._headless) and sys.platform == "darwin"
+        if self._delegate_paint:
+            MAIN_THREAD_PAINT.enable()
+            logger.info(
+                "[DASHBOARD] macOS: composing on dashboard thread, painting on main thread "
+                "(ADR-006); mission runs off the main thread"
+            )
 
     # ------------------------------------------------------------------
     def start(self) -> None:
@@ -152,6 +207,13 @@ class MissionOpsDashboard:
             combined = cv2.resize(combined, (int(w * DISPLAY_SCALE), int(h * DISPLAY_SCALE)),
                                    interpolation=cv2.INTER_LINEAR)
 
+        # macOS (ADR-006): composition is done -- hand the finished image to
+        # the main thread and return. Non-blocking by construction; if the
+        # painter is behind, the previous frame is simply dropped.
+        if self._delegate_paint:
+            MAIN_THREAD_PAINT.publish(self.window_name, combined)
+            return
+
         try:
             if not self._window_initialized:
                 cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
@@ -160,7 +222,16 @@ class MissionOpsDashboard:
             cv2.imshow(self.window_name, combined)
             cv2.waitKey(1)
         except Exception as e:  # noqa: BLE001 -- no $DISPLAY / Qt plugin missing etc.
-            logger.warning("cv2 display unavailable, switching dashboard to headless mode: %s", e)
+            # ERROR, not WARNING: this is an unexpected display failure (the
+            # one EXPECTED case, macOS/Cocoa, is handled up front in
+            # __init__). Swallowing it at WARNING is how a dead camera panel
+            # previously looked identical to a working one. Include the
+            # exception text and thread name so it is attributable.
+            logger.error(
+                "cv2 display unavailable on thread %r, switching dashboard to headless mode: %s: %s",
+                threading.current_thread().name, type(e).__name__, e,
+                exc_info=True,
+            )
             self._headless = True
 
     # ------------------------------------------------------------------
@@ -176,33 +247,157 @@ class MissionOpsDashboard:
 
         frame = sample.frame_bgr.copy()
         h, w = frame.shape[:2]
-        cx, cy = w // 2, h // 2
 
-        # Center crosshair -- the centering target every pursuit converges toward.
+        # Operator request (2026-08-16): the crosshair must sit at the EXACT
+        # image centre the controller centres on -- CenteringController uses
+        # res_w/2.0, res_h/2.0 (a float), not an integer floor, and it
+        # reports that centre in CENTERING_STEP. Prefer the reported value
+        # so the two can never disagree; fall back to this frame's own
+        # centre before the first step arrives.
+        centre = snap.centering.center_px or (w / 2.0, h / 2.0)
+        cx, cy = int(round(centre[0])), int(round(centre[1]))
+
         cv2.line(frame, (cx - 20, cy), (cx + 20, cy), (255, 255, 255), 1, cv2.LINE_AA)
         cv2.line(frame, (cx, cy - 20), (cx, cy + 20), (255, 255, 255), 1, cv2.LINE_AA)
 
+        # Convergence tolerance, drawn as the TRUE ellipse (operator
+        # request, 2026-08-17 -- explicitly not a circle approximation).
+        # The tolerance is +/-0.01 NORMALIZED PER AXIS, and each axis
+        # normalizes by its own half-extent, so the region is an ellipse
+        # with semi-axes tol_x*(w/2) and tol_y*(h/2) -- 6.4 x 4.8 px at
+        # 1280x960. Derived from the frame's own size, so it scales with
+        # whatever resolution the camera delivers.
+        semi_x = max(1, int(round(CENTERING_TOLERANCE_X_NORM * (w / 2.0))))
+        semi_y = max(1, int(round(CENTERING_TOLERANCE_Y_NORM * (h / 2.0))))
+        cv2.ellipse(frame, (cx, cy), (semi_x, semi_y), 0, 0, 360, COL_ACCENT, 1, cv2.LINE_AA)
+
+        intrinsics = default_camera_intrinsics()
+        agl_m = snap.vehicle.position[2] if snap.vehicle.position else None
+
         for d in sample.detections:
-            x1, y1, x2, y2 = d.bbox_px
-            color = _SHAPE_COLOR.get(d.shape_type, (0, 255, 0))
-            if x2 > x1 and y2 > y1:
-                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2, cv2.LINE_AA)
+            # ADR-010 P5: stroke the shape's OWN outline -- a triangle draws
+            # as a triangle, a hexagon as a hexagon. Bounding rectangles are
+            # gone entirely: they said nothing the contour does not say, and
+            # at low altitude a frame-filling box is pure noise. The polygon
+            # is the detector's own approxPolyDP result (the one its
+            # vertex-count gate accepted), so what is drawn is literally
+            # what was detected rather than a redrawing of it.
+            color = COL_CONTOUR
+            contour = _contour_points(d)
+            if contour is not None:
+                cv2.polylines(frame, [contour], True, color, 2, cv2.LINE_AA)
+                label_anchor = tuple(contour[contour[:, 1].argmin()])
+            else:
+                # Adapter fallback (see core/detection/types.py): a detector
+                # that supplies no polygon gets its bbox stroked in the SAME
+                # green -- the overlay never implies "this one is different"
+                # when the only difference is what the detector reported.
+                x1, y1, x2, y2 = d.bbox_px
+                if x2 > x1 and y2 > y1:
+                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2, cv2.LINE_AA)
+                label_anchor = (int(x1), int(y1))
             tx, ty = int(d.center_px[0]), int(d.center_px[1])
             cv2.circle(frame, (tx, ty), 5, color, -1, cv2.LINE_AA)
-            cv2.line(frame, (cx, cy), (tx, ty), (0, 255, 255), 1, cv2.LINE_AA)
+
+            # Lock indicator: YELLOW while this target is being centred,
+            # BLACK once the controller itself reports convergence. The flag
+            # is taken verbatim from CENTERING_STEP -- the overlay never
+            # re-decides "locked" against a threshold of its own, so losing
+            # lock (any later step with converged=False, or a timeout)
+            # reverts it to yellow automatically.
+            locked = snap.centering.converged and snap.centering.shape_type == d.shape_type
+            vector_color = COL_LOCKED if locked else COL_VECTOR
+            cv2.line(frame, (cx, cy), (tx, ty), vector_color, 2 if locked else 1, cv2.LINE_AA)
+
+            # ADR-010 P5: label sits just above the TOPMOST contour vertex,
+            # so it tracks the shape's actual outline rather than a corner
+            # of a box that no longer exists.
             label = f"{d.shape_type} {d.confidence:.2f}"
-            cv2.putText(frame, label, (int(x1), max(0, int(y1) - 8)), FONT, 0.55, color, 2, cv2.LINE_AA)
+            cv2.putText(frame, label, (int(label_anchor[0]), max(12, int(label_anchor[1]) - 8)),
+                        FONT, 0.55, color, 2, cv2.LINE_AA)
+
+            self._draw_ground_distance(frame, d, snap, intrinsics, agl_m,
+                                       (cx, cy), (tx, ty), w, h)
+
+            # W4.4: for RELEASED_OVERLAY_DURATION_S after the servo fires,
+            # tag the target that was just dropped on. Anchored to the
+            # contour, not the frame, so it reads as "this shape" rather than
+            # a global banner -- and it is time-boxed so it can never be
+            # mistaken for a live state.
+            rel_at = snap.payload.released_at
+            if rel_at and snap.payload.released_shape == d.shape_type \
+                    and (time.time() - rel_at) <= RELEASED_OVERLAY_DURATION_S:
+                rx, ry = int(label_anchor[0]), max(28, int(label_anchor[1]) - 28)
+                cv2.putText(frame, "RELEASED", (rx, ry), FONT, 0.6, COL_GOOD, 2, cv2.LINE_AA)
 
         # Slim glance-strip across the top of the feed, mirrors V31's overlay.
         overlay = frame.copy()
         cv2.rectangle(overlay, (0, 0), (w, 26), (0, 0, 0), -1)
         cv2.addWeighted(overlay, 0.45, frame, 0.55, 0, frame)
         age_s = time.time() - sample.ts
-        stale_note = "  [STALE]" if age_s > 1.0 else ""
-        self._text(frame, f"{len(sample.detections)} detection(s){stale_note}", 8, 18, COL_TEXT, 0.5, 1)
+        stale_note = "  [FRAME STALE]" if age_s > 1.0 else ""
+        # ADR-008 B1: a stale DETECTION feed is reported separately from a
+        # stale frame, and loudly -- these are different failures with
+        # opposite meanings (frozen video vs. live video with a dead
+        # detector), and conflating them is how the 2026-08-16 run read as
+        # healthy on screen for 82 seconds while vision was DOWN. The
+        # producer already withholds the boxes themselves; this says why the
+        # overlay went empty instead of leaving it looking like "no targets
+        # in view".
+        if sample.detections_stale:
+            age = f" {sample.detections_age_s:.1f}s" if sample.detections_age_s is not None else ""
+            self._text(frame, f"VISION FEED STALE{age} -- detections not drawn",
+                       8, 18, COL_BAD, 0.5, 1)
+        else:
+            self._text(frame, f"{len(sample.detections)} detection(s){stale_note}", 8, 18, COL_TEXT, 0.5, 1)
 
         self._draw_flight_mode_badge(frame, snap)
         return frame
+
+    def _draw_ground_distance(self, frame, detection, snap: MissionSnapshot, intrinsics,
+                              agl_m, centre, target, w: int, h: int) -> None:
+        """`<TARGET> d=X.X m` at the lower-right of the target->crosshair
+        vector (operator request, 2026-08-16).
+
+        X is the horizontal ground distance from the vehicle's nadir point
+        to the target, from pixel offset + current AGL + the camera's own
+        FOV (parsed from the mono_cam SDF -- see
+        core/detection/camera_intrinsics.py; nothing here hardcodes a lens).
+
+        For the target currently being centred, the value published in
+        CENTERING_STEP is reused verbatim so the label and the log agree
+        exactly; other detections are computed here with the same
+        intrinsics. If neither the intrinsics nor a usable AGL are
+        available, the label is omitted rather than showing a fabricated
+        number."""
+        cx, cy = centre
+        tx, ty = target
+
+        distance_m = None
+        if snap.centering.shape_type == detection.shape_type and snap.centering.ground_distance_m is not None:
+            distance_m = snap.centering.ground_distance_m
+        elif intrinsics is not None:
+            distance_m = intrinsics.scaled_to(w, h).ground_distance_m(tx - cx, ty - cy, agl_m)
+
+        if distance_m is None:
+            return
+
+        text = f"{detection.shape_type} d={distance_m:.1f} m"
+        (tw, th), _ = cv2.getTextSize(text, FONT, 0.5, 1)
+
+        # Lower-right of the vector: anchor to the lower-right END of the
+        # line's bounding box, then clamp so it stays inside the frame when
+        # the target is near an edge.
+        anchor_x = max(cx, tx) + 8
+        anchor_y = max(cy, ty) + th + 10
+        x = min(anchor_x, w - tw - 4)
+        y = min(anchor_y, h - 4)
+
+        # Plate + light text regardless of the vector colour: when the lock
+        # indicator turns the vector black, drawing the label in the same
+        # colour would make it vanish against its own backing plate.
+        cv2.rectangle(frame, (x - 4, y - th - 4), (x + tw + 4, y + 4), (0, 0, 0), -1)
+        cv2.putText(frame, text, (x, y), FONT, 0.5, COL_TEXT, 1, cv2.LINE_AA)
 
     def _draw_flight_mode_badge(self, img: np.ndarray, snap: MissionSnapshot) -> None:
         """Onboard (PX4 flying its own Mission plan) vs Offboard (this
@@ -230,6 +425,7 @@ class MissionOpsDashboard:
         y = self._draw_header(img, snap, 0)
         y = self._draw_blocking(img, snap, y)
         y = self._draw_interlock(img, snap, y)
+        y = self._draw_payload(img, snap, y)
         y = self._draw_health_and_watchdogs(img, snap, y)
         self._draw_timeline(img, snap, y, height)
         return img
@@ -299,6 +495,57 @@ class MissionOpsDashboard:
         self._text(img, f"P1 MAVI: {'OK' if snap.payload.payload_1_released else '--'}", 16, body_y, p1_color, 0.44)
         self._text(img, f"P2 KIRMIZI: {'OK' if snap.payload.payload_2_released else '--'}",
                   self.telemetry_col_width // 2 + 10, body_y, p2_color, 0.44)
+        return y + h + 4
+
+    def _draw_payload(self, img, snap: MissionSnapshot, y: int) -> int:
+        """ADR-010 P2: what the active drop is doing, right now.
+
+        Deliberately shows the release altitude AND whether it landed in the
+        commanded band: V1''' dropped payload 1 at 1.587 m against a
+        commanded 0.45 m and nothing on screen said so. The band check is the
+        producer's (PAYLOAD_STATE.within_tolerance), not re-derived here --
+        the same rule the lock indicator follows."""
+        w = img.shape[1]
+        h = 78
+        p = snap.payload
+        body_y = self._panel(img, 6, w - 6, y, h, "PAYLOAD")
+
+        if not p.active_index:
+            self._text(img, "no drop in progress", 16, body_y, COL_TEXT_DIM, 0.42)
+            return y + h + 4
+
+        released = p.released_alt_m is not None
+        head_color = COL_GOOD if released else COL_ACCENT
+        self._text(img, f"PAYLOAD {p.active_index}  {p.active_shape}", 16, body_y, head_color, 0.46)
+
+        alt_txt = f"{p.current_alt_m:.2f}" if p.current_alt_m is not None else "--"
+        tgt_txt = f"{p.target_alt_m:.2f}" if p.target_alt_m is not None else "--"
+        self._text(img, f"alt {alt_txt} -> {tgt_txt} m   step {p.descent_step or '--'}",
+                   16, body_y + 17, COL_TEXT, 0.4)
+
+        # "vision committed" is the detector's commit, not "is the camera
+        # working" -- below LOW_ALT_VISION_LIMIT_M a False here is EXPECTED
+        # and is what hands the descent to the open-loop path (ADR-010 P1),
+        # so it is drawn dim rather than red.
+        vis = p.vision_committed
+        vis_txt = "yes" if vis else ("no" if vis is not None else "--")
+        vis_color = COL_GOOD if vis else COL_TEXT_DIM
+        off_txt = f"{p.last_offset_cm:.1f} cm" if p.last_offset_cm is not None else "--"
+        self._text(img, f"vision {vis_txt}", 16, body_y + 33, vis_color, 0.4)
+        self._text(img, f"last offset {off_txt}", self.telemetry_col_width // 2 + 10,
+                   body_y + 33, COL_TEXT, 0.4)
+
+        if released:
+            # W4: green, with the wall-clock time of the servo, and it stays
+            # up for the rest of the flight -- disarm is exactly when an
+            # operator goes looking for "did it actually drop, and where".
+            ok = p.released_within_tolerance
+            rel_color = COL_GOOD if ok else COL_WARN
+            band = "" if ok else "  OUT OF BAND"
+            stamp = time.strftime("%H:%M:%S", time.localtime(p.released_at)) if p.released_at else "--:--:--"
+            self._text(img, f"RELEASED at {p.released_alt_m:.2f} m{band}",
+                       16, body_y + 51, rel_color, 0.44)
+            self._text(img, stamp, self.telemetry_col_width - 78, body_y + 51, rel_color, 0.42)
         return y + h + 4
 
     def _draw_health_and_watchdogs(self, img, snap: MissionSnapshot, y: int) -> int:

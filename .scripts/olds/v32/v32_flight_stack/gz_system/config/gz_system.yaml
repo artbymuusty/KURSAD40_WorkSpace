@@ -10,7 +10,18 @@ camera:
   zmq_address: "tcp://127.0.0.1:5555"
 control_gains:
   kp_horizontal: 0.5
-  kp_vertical: 0.3
+  # ADR-009 S1 (2026-08-16): 0.3 -> 0.5, matching kp_horizontal. ey
+  # normalizes by the SHORTER half-axis (480px vs 640px), so the forward
+  # axis was both weaker-gained and larger-normalized -- it was the axis
+  # that never closed in any V1 pursuit.
+  #
+  # Briefly reverted to 0.4 after V1' showed oscillation, then RESTORED to
+  # 0.5 by the operator (2026-08-17) once the V1' data showed the
+  # oscillation was on the X axis (kp_horizontal, untouched) and driven by
+  # the altitude-independent command floor -- fixed properly by ADR-009 S2.
+  # real_system.yaml deliberately stays at 0.3: a real-vehicle gain must
+  # not move on a simulator measurement.
+  kp_vertical: 0.5
   kp_altitude: 0.5
   # Operator-specified centering precision (2026-08-13 revision): ±0.01
   # normalized in both axes.

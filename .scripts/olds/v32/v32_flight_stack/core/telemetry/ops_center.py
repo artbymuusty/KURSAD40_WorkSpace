@@ -13,15 +13,13 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
+from typing import Callable, Optional
 
 from core.config.parameters import (
-    CENTERING_CONVERGENCE_TIMEOUT_S,
-    CONNECTION_ESTABLISH_TIMEOUT_S,
     DASHBOARD_REFRESH_HZ,
     FLIGHT_TELEMETRY_HEARTBEAT_INTERVAL_S,
     GOREV2_MAX_FLIGHT_DURATION_S,
     HEALTH_GRACE_MULTIPLIER,
-    MISSION_UPLOAD_ACK_TIMEOUT_S,
     QGC_CHECK_INTERVAL_S,
     QGC_UDP_PORT,
     VISION_HEARTBEAT_INTERVAL_S,
@@ -60,6 +58,13 @@ class OpsCenter:
     qgc_monitor: QgcMonitor
     dashboard: MissionOpsDashboard
     _supervisor_task: "asyncio.Task | None" = None
+    # ADR-008 B2 (A2 table row 6): set by the entrypoint once the
+    # MasterMissionController exists (this object is built and started
+    # BEFORE the mission runtime, by design -- ADR-004 §13). Called when
+    # MISSION_TIMEOUT fires, so the mandatory 10-minute budget actually
+    # acts. Optional: with no hook the watchdog degrades to its previous
+    # report-only behaviour rather than failing.
+    mission_timeout_hook: Optional[Callable[[str], None]] = None
 
     def start(self) -> None:
         """Auto-launch: the dashboard opens and background monitors start
@@ -68,13 +73,30 @@ class OpsCenter:
         self.dashboard.start()
         self.watchdog.arm(
             "MISSION_TIMEOUT", "MasterMissionController", GOREV2_MAX_FLIGHT_DURATION_S,
-            on_fire=lambda _name: self.context.transition_to(
-                MissionPhase.MISSION_TIMEOUT, reason=f"exceeded {GOREV2_MAX_FLIGHT_DURATION_S:.0f}s budget",
-                subsystem="WatchdogEngine",
-            ),
+            on_fire=self._on_mission_timeout,
         )
         self._supervisor_task = asyncio.ensure_future(self._supervisor_loop())
         logger.info("Mission Operations Center started (mission_id=%s).", self.mission_id)
+
+    def _on_mission_timeout(self, _name: str) -> None:
+        """ADR-008 B2: GOREV2_MAX_FLIGHT_DURATION_S is Şartname Bölüm 5.6's
+        MANDATORY 10-minute limit, but firing this watchdog used to do
+        nothing except relabel the phase -- the mission kept flying past its
+        own budget with no abort, no landing, and no way for an operator to
+        tell the difference. It now aborts the mission through the same
+        return-to-start/finish-then-land path every other terminal route
+        uses.
+
+        Runs on the mission's own asyncio loop (the ops-center supervisor
+        tick), so the hook can safely touch mission tasks."""
+        reason = f"MISSION_TIMEOUT: exceeded {GOREV2_MAX_FLIGHT_DURATION_S:.0f}s budget"
+        self.context.transition_to(MissionPhase.MISSION_TIMEOUT, reason=reason,
+                                   subsystem="WatchdogEngine")
+        if self.mission_timeout_hook is None:
+            logger.error("MISSION_TIMEOUT fired but no abort hook is wired -- "
+                         "vehicle will NOT be brought home automatically.")
+            return
+        self.mission_timeout_hook(reason)
 
     async def _supervisor_loop(self) -> None:
         """Owns the periodic health/watchdog/QGC tick. Runs on the mission's

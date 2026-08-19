@@ -29,16 +29,23 @@ os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
 import sys
 import traceback
 
+try:  # normal import when v32_flight_stack is on PYTHONPATH
+    from gz_system.gz_env import apply_gz_env, describe_gz_env
+except ImportError:  # spawned as a script from inside gz_system/
+    from gz_env import apply_gz_env, describe_gz_env
+
 DEFAULT_GZ_TOPIC = "/world/default/model/x500_mono_cam_down_0/link/camera_link/sensor/camera/image"
 DEFAULT_ZMQ_ADDRESS = "tcp://127.0.0.1:5555"
 
 try:
     from gz.transport13 import Node
-    from gz.msgs11.image_pb2 import Image as ImageMsg
+    from gz.msgs10.image_pb2 import Image as ImageMsg
 except ImportError as e:
     print(f"[CAMERA_SERVICE] FATAL: Gazebo Python bindings not importable: {e}")
-    print("[CAMERA_SERVICE] Fix: ensure PYTHONPATH includes /usr/lib/python3/dist-packages "
-          "(camera_service_manager.py sets this automatically; running camera_service.py "
+    print("[CAMERA_SERVICE] Fix: ensure PYTHONPATH includes the system Gazebo Python "
+          "bindings (/usr/lib/python3/dist-packages on Linux, or "
+          "$HOMEBREW_PREFIX/lib/python<X.Y>/site-packages on macOS -- "
+          "camera_service_manager.py sets this automatically; running camera_service.py "
           "directly without it will hit this exact error).")
     traceback.print_exc()
     sys.exit(1)
@@ -201,6 +208,13 @@ if __name__ == "__main__":
     parser.add_argument("--zmq-addr", type=str, default=DEFAULT_ZMQ_ADDRESS, help="ZMQ Publish Address")
     parser.add_argument("--no-watchdog", action="store_true", help="Disable auto-reconnect watchdog loop")
     args = parser.parse_args()
+
+    # Partition/IP drift is invisible until frames silently stop arriving
+    # (gz-transport just never discovers the publisher), so state the
+    # EFFECTIVE values up front. apply_gz_env() only fills in defaults, so an
+    # explicit value from the manager or the shell still wins.
+    apply_gz_env()
+    print(f"[CAMERA_SERVICE] gz-transport env: {describe_gz_env()}")
 
     resolved_topic = resolve_camera_topic(args.topic)
     service = CameraService(resolved_topic, args.zmq_addr)

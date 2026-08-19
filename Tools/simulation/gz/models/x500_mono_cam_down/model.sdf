@@ -27,118 +27,49 @@
   never becomes dynamic. None of gravity/mass/collision/self_collide here
   matter to that mechanism, so this is back to its original simple form.
 -->
-<link name="payload_blue_link">
-  <pose relative_to="base_link">0 0.20 -0.32 0 0 0</pose>
-  <gravity>false</gravity>
-
-  <inertial>
-    <mass>0.001</mass>
-    <inertia>
-      <ixx>1e-6</ixx> <iyy>1e-6</iyy> <izz>1e-6</izz>
-      <ixy>0</ixy> <ixz>0</ixz> <iyz>0</iyz>
-    </inertia>
-  </inertial>
-
-  <visual name="payload_blue_visual">
-    <geometry>
-      <box>
-        <size>0.3 0.225 0.05</size>
-      </box>
-    </geometry>
-    <material>
-      <diffuse>0 0 1 1</diffuse>
-      <ambient>0 0 1 1</ambient>
-    </material>
-  </visual>
-</link>
-
-<joint name="payload_blue_dummy_joint" type="fixed">
-  <parent>base_link</parent>
-  <child>payload_blue_link</child>
-</joint>
-
-
 <!-- ===================== DUMMY RED (sol / left side) ===================== -->
-<link name="payload_red_link">
-  <pose relative_to="base_link">0 -0.20 -0.32 0 0 0</pose>
-  <gravity>false</gravity>
-
-  <inertial>
-    <mass>0.001</mass>
-    <inertia>
-      <ixx>1e-6</ixx> <iyy>1e-6</iyy> <izz>1e-6</izz>
-      <ixy>0</ixy> <ixz>0</ixz> <iyz>0</iyz>
-    </inertia>
-  </inertial>
-
-  <visual name="payload_red_visual">
-    <geometry>
-      <box>
-        <size>0.3 0.225 0.05</size>
-      </box>
-    </geometry>
-    <material>
-      <diffuse>1 0 0 1</diffuse>
-      <ambient>1 0 0 1</ambient>
-    </material>
-  </visual>
-</link>
-
-<joint name="payload_red_dummy_joint" type="fixed">
-  <parent>base_link</parent>
-  <child>payload_red_link</child>
-</joint>
-
-
 <!--
-  RESTORE: an earlier pass here was based on reading the WRONG plugin source
-  file (Tools/simulation/gz/plugins/payload_drop, a simpler joint-removal
-  stub in the gz submodule) and concluded these parameters were dead,
-  replacing this block with two joint_name-based plugin instances. The
-  plugin that is ACTUALLY compiled and loaded is
-  src/modules/simulation/gz_plugins/payload_drop/payload_drop_system.cc
-  (confirmed by tracing the built libPayloadDropSystem.so's own path back to
-  that source directory), and it is a completely different, working
-  "SDF-spawn" design:
-    - single shared <topic> (default "/payload_drop", matching
-      .scripts/denemePayload.py's known-working manual test trigger)
-    - finds <uav_model>/<uav_link> and the two dummy links by name
-    - on each drop request, removes only the relevant dummy's visual +
-      collision (the dummy link/joint stays, it never becomes dynamic
-      itself) and spawns a brand new, independent, physically dynamic
-      payload model via the world "create" service at the dummy's world
-      pose + the given offset
-    - sequences RED first (stage 0), then BLUE (stage 1), then ignores
-      further requests (stage 2). It does not read which color the
-      caller intends from the topic/message at all, the caller (payload.py)
-      only ever needs to say "drop" once per payload, in order
-  This restores the original single-instance configuration with the real
-  parameter set.
+  ADR-011 (2026-08-17): PayloadDropSystem is replaced by two DetachableJoint
+  instances, and the two dummy payload links above are gone.
+
+  Why: PayloadDropSystem released a payload by SPAWNING a brand-new model
+  through the world "create" service. Measured on 2026-08-17, a body spawned
+  that way gets no reliable collision pairs in this gz-sim 8.15 build: a real
+  drop was logged at z=-0.72 and still falling 3 s later, and a
+  payload-equivalent probe fell through bare ground at every offset tested
+  while an identical probe rested fine on the world-loaded drone. So every
+  mission drop was falling through the world instead of landing on a target.
+
+  DetachableJoint keeps real drop physics (the payload is a normal dynamic
+  body that falls, bounces and settles) while guaranteeing collision pairs,
+  because both bodies exist from world load rather than being created
+  mid-run. Release = one message on the detach topic, which mirrors the real
+  180-degree servo: left rotation frees the LEFT payload, right the RIGHT.
+
+  Mount side is dictated by the existing, UNCHANGED servo->colour mapping in
+  gz_payload_actuator.py: release_payload_at_mavi_altigen() -> "red",
+  release_payload_at_kirmizi_ucgen() -> "blue". The dummies' SIDES are
+  kept (blue LEFT +y, red RIGHT -y) but not their offsets: those dummies
+  hung 0.32 m below base_link, which is underground for a landed vehicle,
+  and they got away with it only because they had gravity and collision
+  disabled. A real body cannot. The mount points now live in the world SDF
+  (0, -+0.28, 0.025), chosen to clear the landing gear; see the F2 note
+  there for why 0.20 m did not.
 -->
-<plugin filename="libPayloadDropSystem.so" name="payload::PayloadDropSystem">
-  <topic>/payload_drop</topic>
-  <output_topic>/payload_drop_state</output_topic>
-  <world_name>default</world_name>
-
-  <uav_model>x500_mono_cam_down_0</uav_model>
-  <uav_link>base_link</uav_link>
-
-  <dummy_payload_link_red>payload_red_link</dummy_payload_link_red>
-  <offset_red_x>0</offset_red_x>
-  <offset_red_y>0</offset_red_y>
-  <offset_red_z>-0.55</offset_red_z>
-
-  <dummy_payload_link_blue>payload_blue_link</dummy_payload_link_blue>
-  <offset_blue_x>0</offset_blue_x>
-  <offset_blue_y>0</offset_blue_y>
-  <offset_blue_z>-0.50</offset_blue_z>
-
-  <spawn_name_prefix>payload_drop_</spawn_name_prefix>
-
-  <radius>0.15</radius>
-  <length>0.05</length>
-  <mass>0.85</mass>
+<plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+  <parent_link>base_link</parent_link>
+  <child_model>payload_red</child_model>
+  <child_link>link</child_link>
+  <detach_topic>/payload/detach/red</detach_topic>
 </plugin>
+
+<plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+  <parent_link>base_link</parent_link>
+  <child_model>payload_blue</child_model>
+  <child_link>link</child_link>
+  <detach_topic>/payload/detach/blue</detach_topic>
+</plugin>
+
 
 
 

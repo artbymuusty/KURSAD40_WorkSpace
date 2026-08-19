@@ -78,10 +78,27 @@ function(px4_add_git_submodule)
 	string(REPLACE "/" "_" NAME ${PATH})
 	string(REPLACE "." "_" NAME ${NAME})
 
+	# Some submodule paths in this workspace were flattened into the
+	# superproject's own tree (no nested .git) rather than kept as live
+	# submodule checkouts, so depending on ${PATH}/.git unconditionally makes
+	# Ninja fail at graph-generation time ("missing and no known rule to make
+	# it") even though the submodule's content is already present and
+	# correct. Depend on .git only when it actually exists; otherwise fall
+	# back to the (always-present) submodule directory itself, so
+	# check_submodules.sh still runs -- it already no-ops safely for a path
+	# that isn't a registered gitlink (verified: `git submodule update --init
+	# -- <flattened path>` exits 0 with no output). Submodules that do have a
+	# real .git keep their exact original dependency.
+	if(EXISTS ${PATH}/.git)
+		set(PX4_GIT_SUBMODULE_DEPEND ${PATH}/.git)
+	else()
+		set(PX4_GIT_SUBMODULE_DEPEND ${PATH})
+	endif()
+
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/git_init_${NAME}.stamp
 		COMMAND Tools/check_submodules.sh ${REL_PATH}
 		COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/git_init_${NAME}.stamp
-		DEPENDS ${PX4_SOURCE_DIR}/.gitmodules ${PATH}/.git
+		DEPENDS ${PX4_SOURCE_DIR}/.gitmodules ${PX4_GIT_SUBMODULE_DEPEND}
 		COMMENT "git submodule ${REL_PATH}"
 		WORKING_DIRECTORY ${PX4_SOURCE_DIR}
 		USES_TERMINAL

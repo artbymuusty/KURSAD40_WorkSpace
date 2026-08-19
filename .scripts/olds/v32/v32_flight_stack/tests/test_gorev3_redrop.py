@@ -12,7 +12,8 @@ class _RecordingCentering:
         self.calls = []
         self._converges = converges
 
-    async def go_to_and_center(self, shape_type: str, altitude_m: float) -> bool:
+    async def go_to_and_center(self, shape_type: str, altitude_m: float,
+                               alt_tolerance_m: float = None, aim_offset_body_m=None) -> bool:
         self.calls.append(('go_to_and_center', shape_type, altitude_m))
         return self._converges
 

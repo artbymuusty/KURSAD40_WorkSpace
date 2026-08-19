@@ -23,7 +23,15 @@ unset PYTHONPATH
 # on different discovery paths, so gz_bridge/camera_service never see each
 # other's topics even though both are genuinely running. Pin it here too so
 # every process in the chain agrees.
-export GZ_IP=127.0.0.1
+#
+# GZ_PARTITION matters for the same reason and was the actual macOS blocker:
+# gz-transport's DEFAULT partition is "<hostname>:<username>", and this Mac's
+# hostname is DHCP/reverse-DNS derived, so it changes with the network. The
+# sim and anything launched later ended up in different partitions and never
+# discovered each other. Both values now come from one shared file used by the
+# sim, mission and camera launchers alike.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)/.scripts/olds/v32/v32_flight_stack/gz_system/gz_env.sh"
+echo "[ORCHESTRATOR] gz-transport env: GZ_PARTITION=$GZ_PARTITION GZ_IP=$GZ_IP"
 
 # ---------------------------------------------------------
 # 2. PRE-LAUNCH STATE PURGE (Process-level enforcement)
@@ -31,8 +39,17 @@ export GZ_IP=127.0.0.1
 echo "[ORCHESTRATOR] 2/4 Terminating existing/orphaned Gazebo and PX4 processes..."
 
 # Kill any orphaned PX4 SITL processes to ensure no conflicting sessions
-pkill -9 -f "px4_sitl" 2>/dev/null
-pkill -9 -f "px4" 2>/dev/null
+# ADR-010 R3: ANCHORED patterns. These used to be `pkill -9 -f "px4"`,
+# which matches ANY process whose full command line merely mentions px4 --
+# including unrelated shells, editors, and tooling. That is not
+# hypothetical: it kills the caller's own helper shells, and the
+# verify-idle gate below (same unanchored pattern) then reports FATAL and
+# exits WITHOUT starting the simulator, which is the most likely reason
+# several "relaunch" attempts on 2026-08-17 left no PX4 running and no
+# ULog on disk at all. Anchoring to the real binary path and the real
+# `gz sim` invocation matches the processes we actually mean.
+pkill -9 -f "px4_sitl_default/bin/px4$" 2>/dev/null
+pkill -9 -f "bin/px4$" 2>/dev/null
 
 # Kill any Gazebo server processes or zombie transport listeners
 #
@@ -58,10 +75,14 @@ sleep 2
 # ---------------------------------------------------------
 echo "[ORCHESTRATOR] 3/4 Verifying process null state..."
 
-if pgrep -f "px4|gz sim|gz-transport-topic" > /dev/null; then
+# ADR-010 R3: anchored for the same reason as the pkill patterns above --
+# an unanchored "px4" here made the gate trip on any shell that merely
+# mentioned px4, aborting the launch before it began.
+_ORPHANS="$(pgrep -f 'bin/px4$'; pgrep -f 'gz sim'; pgrep -f 'gz-transport-topic')"
+if [ -n "$_ORPHANS" ]; then
     echo "[ORCHESTRATOR] FATAL: Failed to clear orphaned simulation processes."
     echo "[ORCHESTRATOR] Manual intervention required. Processes still alive:"
-    pgrep -l -f "px4|gz sim|gz-transport-topic"
+    echo "$_ORPHANS" | while read -r _p; do ps -p "$_p" -o pid,args= 2>/dev/null; done
     exit 1
 fi
 
@@ -91,3 +112,20 @@ fi
 # here previously pointed at a make target/model directory that no longer
 # exists, which would have failed to spawn the vehicle at all).
 make px4_sitl gz_x500_mono_cam_down
+
+# ---------------------------------------------------------
+# 5. POST-LAUNCH: CLEAR A STUCK LAND MODE  (ADR-010 R3)
+# ---------------------------------------------------------
+# After a mission lands, PX4 stays in flight_mode=LAND even once disarmed
+# and ON_GROUND, and refuses to arm from there (is_armable False while
+# every individual pre-arm check passes). Three runs on 2026-08-17 died on
+# this, each after ~3 minutes of futile waiting; commanding HOLD clears it
+# in about 2 seconds. This lives here, in the launcher/hygiene layer,
+# deliberately: it is a rig-reset concern, not mission logic, and the
+# mission must never quietly re-arm a vehicle an operator left in LAND.
+_HYGIENE="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)/.scripts/olds/v32/clear_land_mode.py"
+if [ -f "$_HYGIENE" ]; then
+    echo "[ORCHESTRATOR] 5/5 Clearing any stuck LAND mode before arming..."
+    source "$(dirname "${BASH_SOURCE[0]}")/.scripts/olds/v32/resolve_python.sh" 2>/dev/null
+    "${PYTHON_BIN:-python3}" "$_HYGIENE" || true
+fi

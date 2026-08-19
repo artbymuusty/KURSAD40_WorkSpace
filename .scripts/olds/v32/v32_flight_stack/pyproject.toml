@@ -13,5 +13,7 @@ dependencies = [
     "pyyaml",
     "pytest",
     "pytest-asyncio",
-    "ultralytics"
+    "ultralytics",
+    "pyzmq",
+    "psutil"
 ]

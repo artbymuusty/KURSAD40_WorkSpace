@@ -7,20 +7,34 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/materials/meshes/triangle_red_1m_2cm.stl</uri>
+            <uri>../../materials/meshes/triangle_red_1m_2cm.stl</uri>
           </mesh>
         </geometry>
         <material>
           <ambient>1 0 0 1</ambient>
           <diffuse>1 0 0 1</diffuse>
           <specular>0.1 0.1 0.1 1</specular>
+          <!-- W1: moved inside <material>; see blue_hexagon for the warning
+               this clears. Colours untouched. -->
+          <double_sided>true</double_sided>
         </material>
-        <double_sided>true</double_sided>
       </visual>
 
+      <!-- W1: sized and OFFSET to the actual mesh footprint. The triangle
+           mesh spans x [-0.5, 0.5], y [-0.289, 0.577] - i.e. its origin is
+           the CENTROID, not the bounding-box centre, which sits 0.144 m
+           away (this is also the source of the ~13 cm release-offset
+           constant measured in Phase 12 Q3). The old 1x1 box centred on the
+           origin therefore missed the apex above y=0.5 while covering empty
+           ground at the base corners. 6 mm thick so the target reads as a
+           ground marking. -->
+      <!-- Thin above, thick below - see blue_hexagon for the tunnelling
+           measurement that forced this. Top at world z=0.006, bulk
+           underground. -->
       <collision name="collision">
+        <pose>0 0.144 -0.047 0 0 0</pose>
         <geometry>
-          <box><size>1 1 0.02</size></box>
+          <box><size>1 0.866 0.1</size></box>
         </geometry>
       </collision>
     </link>

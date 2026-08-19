@@ -12,6 +12,28 @@ PID_CAMERA = "camera_service.pid"
 PID_MISSION = "mission.pid"
 PID_VIEWER = "viewer.pid"
 
+def _gz_child_env():
+    """Environment for a child process that talks to Gazebo.
+
+    Replaces the previous hardcoded "/usr/lib/python3/dist-packages" (Debian
+    apt layout) with the location appropriate to the running platform, and
+    pins GZ_PARTITION/GZ_IP so the child lands in the SAME gz-transport
+    partition as the simulator -- gz-transport's default partition is
+    "<hostname>:<username>", and a DHCP-derived hostname changing mid-session
+    silently put processes in different partitions, yielding zero frames.
+    """
+    env = os.environ.copy()
+    if sys.platform == "darwin":
+        brew_prefix = env.get("HOMEBREW_PREFIX", "/opt/homebrew")
+        sys_paths = f"{brew_prefix}/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    else:
+        sys_paths = "/usr/lib/python3/dist-packages"
+    env["PYTHONPATH"] = f"{sys_paths}:{env.get('PYTHONPATH', '')}"
+    env.setdefault("GZ_PARTITION", "kursad40")
+    env.setdefault("GZ_IP", "127.0.0.1")
+    return env
+
+
 def _ensure_logs_dir():
     os.makedirs(LOGS_DIR, exist_ok=True)
 
@@ -240,12 +262,28 @@ def check_health():
         print(f"  ✓ YOLO weights file present ({YOLO_WEIGHTS_PATH})")
 
     # 3. Gazebo Bindings
-    sys.path.append("/usr/lib/python3/dist-packages")
-    try:
-        from gz.transport13 import Node
-        print("  ✓ Gazebo Python Bindings (gz.transport13)")
-    except ImportError:
-        errors.append("✓ Gazebo bindings: FAILED\n  Why: 'gz-transport13' python bindings not found in /usr/lib/python3/dist-packages.\n  Fix: Ensure python3-gz-transport13 is installed via apt.")
+    #
+    # Ask the interpreter that will actually run the pipeline whether it can
+    # import the bindings, instead of testing for a fixed distro path. The old
+    # check appended /usr/lib/python3/dist-packages (Debian/apt layout) and
+    # reported failure in terms of apt packages, which is meaningless on macOS
+    # where Homebrew installs them elsewhere -- it failed even when the
+    # bindings were present and working.
+    probe = subprocess.run(
+        [sys.executable, "-c", "import gz.transport13, gz.msgs10"],
+        capture_output=True, text=True, env=os.environ.copy(),
+    )
+    if probe.returncode == 0:
+        print("  ✓ Gazebo Python Bindings (gz.transport13, gz.msgs10)")
+    else:
+        errors.append(
+            "✓ Gazebo bindings: FAILED\n"
+            f"  Why: '{sys.executable}' cannot import gz.transport13 / gz.msgs10.\n"
+            f"  Detail: {probe.stderr.strip().splitlines()[-1] if probe.stderr.strip() else 'no error output'}\n"
+            "  Fix: ensure PYTHONPATH includes the system Gazebo Python bindings\n"
+            "       for this interpreter (they ship with the Gazebo install, not pip),\n"
+            "       and that you are running inside the KURSAD40 environment."
+        )
 
     if errors:
         print("\n--- PRE-FLIGHT CHECK FAILED ---")
@@ -287,10 +325,7 @@ def start_camera_service():
     print("[ INFO ] Starting Camera Service...")
     _rotate_log("camera_service.log")
     
-    env = os.environ.copy()
-    sys_paths = "/usr/lib/python3/dist-packages"
-    env["PYTHONPATH"] = f"{sys_paths}:{env.get('PYTHONPATH', '')}"
-    env["GZ_IP"] = "127.0.0.1"
+    env = _gz_child_env()
     
     out = open(os.path.join(LOGS_DIR, "camera_service.log"), "w")
     print(f"[DEBUG] process_manager starting camera_service with PYTHONPATH={env['PYTHONPATH']} GZ_IP={env.get('GZ_IP')} PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION={env.get('PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION', 'None')}")
@@ -393,10 +428,7 @@ def start_foreground_cam():
         print("[ WARN ] Viewer is already running in background. Stopping it first...")
         kill_process(PID_VIEWER, "viewer.py", "Viewer")
 
-    env = os.environ.copy()
-    sys_paths = "/usr/lib/python3/dist-packages"
-    env["PYTHONPATH"] = f"{sys_paths}:{env.get('PYTHONPATH', '')}"
-    env["GZ_IP"] = "127.0.0.1"
+    env = _gz_child_env()
 
     cam_p = subprocess.Popen(
         [sys.executable, "-u", "camera_service.py"],
@@ -556,10 +588,7 @@ def stop_mission():
 
 def start_camera_test():
     print("[ INFO ] Launching Camera Diagnostics...")
-    env = os.environ.copy()
-    sys_paths = "/usr/lib/python3/dist-packages"
-    env["PYTHONPATH"] = f"{sys_paths}:{env.get('PYTHONPATH', '')}"
-    env["GZ_IP"] = "127.0.0.1"
+    env = _gz_child_env()
     subprocess.call([sys.executable, "-u", "camera_test.py"], env=env)
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>file:///home/muusty/autokursad/Tools/simulation/gz/worlds/materials/meshes/hexagon_blue_1m_2cm.stl</uri>
+            <uri>../../materials/meshes/hexagon_blue_1m_2cm.stl</uri>
             <scale>5 5 1</scale>
           </mesh>
         </geometry>
@@ -16,13 +16,38 @@
           <diffuse>0.00 0.55 1.00 1</diffuse>   <!-- canlı “elektrik mavisi” -->
           <specular>0.90 0.90 0.90 1</specular> <!-- parlak yansıma -->
           <emissive>0.000 0.004 0.541 1</emissive>
+          <!-- W1: <double_sided> was a child of <visual>, which is not a
+               valid SDF location - Gazebo logged "XML Element[double_sided],
+               child of element[visual], not defined in SDF" and copied it
+               inertly, so double-sided rendering was never actually on. It
+               belongs inside <material>. Colours are untouched. -->
+          <double_sided>true</double_sided>
         </material>
-        <double_sided>true</double_sided>
       </visual>
 
+      <!-- W1: the collision used to be a 1x1 m box while the VISUAL is the
+           1 m hexagon mesh scaled 5x5 - a 5 m x 4.33 m shape. So ~96% of
+           the visible hexagon had no collision under it, and a payload
+           released anywhere but the middle fell straight through the
+           target. Measured on 2026-08-17: a payload-equivalent cylinder
+           dropped at the centre settles at z=0.081 (resting on the target),
+           the same cylinder dropped 1.5 m out passes z=-1.08 and keeps
+           going. The box now matches the scaled visual's footprint exactly
+           (5 x 4.33), and is thin (6 mm) so the target still reads as
+           ground marking rather than a kerb. -->
+      <!-- Thin ABOVE, thick BELOW. A 6 mm-thick plate was tried first and
+           measured worse: a payload falling from 1 m hits at ~4.4 m/s, which
+           is several millimetres per physics step, so it TUNNELS straight
+           through - 0.4/0.8/1.2/1.5/2.2 m offsets all ended at -17 to -32 m
+           while only a dead-centre drop happened to catch. The box is now
+           100 mm thick and offset downward so its TOP sits at world z=0.006,
+           3 mm proud of the visual plane (no z-fighting with the payload's
+           bottom face) while the bulk extends underground where it is
+           invisible and cannot be tunnelled through. -->
       <collision name="collision">
+        <pose>0 0 -0.047 0 0 0</pose>
         <geometry>
-          <box><size>1 1 0.02</size></box>
+          <box><size>5 4.33 0.1</size></box>
         </geometry>
       </collision>
     </link>

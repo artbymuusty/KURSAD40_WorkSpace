@@ -45,6 +45,16 @@ else()
         GstCameraSystem.cpp
     )
 
+    # pkg_check_modules() only populates GSTREAMER_LIBRARIES with bare "-l"
+    # names, not search paths -- GSTREAMER_LIBRARY_DIRS has to be added
+    # separately. This was latent on Linux (gstreamer sits in the linker's
+    # default /usr/lib search path there) but fails on macOS, where Apple's
+    # ld does not search Homebrew's /opt/homebrew/lib by default.
+    target_link_directories(${PROJECT_NAME}
+        PUBLIC ${GSTREAMER_LIBRARY_DIRS}
+        PUBLIC ${GSTREAMER_APP_LIBRARY_DIRS}
+    )
+
     target_link_libraries(${PROJECT_NAME}
         PUBLIC px4_gz_msgs
         PUBLIC ${GZ_SENSORS_TARGET}

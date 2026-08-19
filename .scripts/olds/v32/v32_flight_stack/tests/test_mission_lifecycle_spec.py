@@ -12,11 +12,14 @@ from mocks.mock_camera_source import MockCameraSource
 from mocks.mock_payload_actuator import MockPayloadActuator
 
 from core.detection.types import Detection
+from core.detection.camera_intrinsics import default_camera_intrinsics
 from core.detection.target_validator import TargetValidator
 from core.detection.target_selector import TargetSelector
 from core.mission.debounce import DebounceTracker
 from core.position_log.position_store import PositionStore
 from core.mission.interlock import PayloadInterlock
+from core.detection.detection_feed import DetectionFeed
+from core.detection.vision_runtime import VisionRuntime
 from core.navigation.centering_controller import CenteringController
 from core.mission.payload_release import PayloadReleaseService
 from core.mission.gorev2_fsm import PayloadMissionSequencer
@@ -31,13 +34,43 @@ class _NullDetector:
 
 
 class _FixedShapeDetector:
-    """Reports one or more fixed shapes, dead-center, every frame."""
-    def __init__(self, shape_types):
+    """Reports one or more shapes pinned to a fixed point on the GROUND.
+
+    Was dead-centre every frame regardless of where the vehicle was, which
+    made lateral centering vacuous: the error was already zero, so any loop
+    "converged" instantly. A2 aims the payload rather than the camera, so
+    the target has to end up off-centre by the mount offset -- reachable
+    only if flying sideways actually moves the shape in frame. With `flight`
+    supplied, the shape is projected from the vehicle's own NED position
+    (yaw 0 in this mock: forward=north, right=east); without it, the old
+    dead-centre behaviour is kept for the tests that only need a detection
+    to exist."""
+
+    def __init__(self, shape_types, flight=None, res=(640, 480)):
         self.shape_types = shape_types
+        self.flight = flight
+        self.res = res
+
+    def _center_px(self):
+        cx, cy = self.res[0] / 2.0, self.res[1] / 2.0
+        if self.flight is None:
+            return (cx, cy)
+        north, east, _ = self.flight._ned_pos
+        _, _, alt = self.flight._global_pos
+        intrinsics = default_camera_intrinsics()
+        if intrinsics is None or not alt or alt <= 0:
+            return (cx, cy)
+        px_per_m = intrinsics.scaled_to(*self.res).focal_px / alt
+        # Image +x is body-right and +y is body-aft, so a vehicle that has
+        # moved east sees the ground target slide left, and one that has
+        # moved north sees it slide down.
+        return (cx - east * px_per_m, cy + north * px_per_m)
 
     async def detect(self, frame):
-        return [Detection(shape_type=s, confidence=0.9, center_px=(320.0, 240.0),
-                          bbox_px=(300, 220, 340, 260)) for s in self.shape_types]
+        cx, cy = self._center_px()
+        return [Detection(shape_type=s, confidence=0.9, center_px=(cx, cy),
+                          bbox_px=(cx - 20, cy - 20, cx + 20, cy + 20))
+                for s in self.shape_types]
 
 
 def _build_orchestrator(flight, detector, tmp_path, min_consecutive_frames=1):
@@ -49,9 +82,12 @@ def _build_orchestrator(flight, detector, tmp_path, min_consecutive_frames=1):
     position_store = PositionStore(str(tmp_path / "positions.json"))
     interlock = PayloadInterlock()
     checkpoint = MissionCheckpoint()
-    centering = CenteringController(flight, detector, camera)
+    # ADR-008 B1: centering/verification consume the orchestrator's one
+    # detection loop through this feed; only the orchestrator gets the detector.
+    detection_feed = DetectionFeed()
+    centering = CenteringController(flight, detection_feed, camera)
     centering.lateral_timeout_s = 1.0
-    release_service = PayloadReleaseService(actuator, detector, camera, centering, flight)
+    release_service = PayloadReleaseService(actuator, detection_feed, camera, centering, flight)
     sequencer = PayloadMissionSequencer(flight, centering, interlock, position_store, release_service)
 
     orch = Gorev2Orchestrator(
@@ -59,6 +95,11 @@ def _build_orchestrator(flight, detector, tmp_path, min_consecutive_frames=1):
         interlock=interlock, position_store=position_store, debounce=debounce,
         validator=validator, selector=selector, centering=centering, sequencer=sequencer,
         checkpoint=checkpoint, release_service=release_service,
+        detection_feed=detection_feed,
+        # ADR-010 P3: vision now lives outside the orchestrator. These
+        # tests exercise Görev 2 alone, so they scope a runtime to this
+        # run; production (main_gz) owns one for the whole mission.
+        vision_runtime=VisionRuntime(camera, detector, detection_feed),
     )
     return orch, position_store, interlock
 
@@ -119,7 +160,7 @@ async def test_3_red_only_search_continues_mission_may_resume(tmp_path):
 @pytest.mark.asyncio
 async def test_4_both_targets_found_search_completes_permanently_offboard_sole_authority(tmp_path):
     flight = MockFlightBackend()
-    detector = _FixedShapeDetector(["MAVI_ALTIGEN", "KIRMIZI_UCGEN"])
+    detector = _FixedShapeDetector(["MAVI_ALTIGEN", "KIRMIZI_UCGEN"], flight=flight)
     orch, position_store, interlock = _build_orchestrator(flight, detector, tmp_path)
     # Speed up altitude convergence for this test only (real default kp is a
     # conservative physical-testing placeholder -- see parameters.py) since
@@ -143,7 +184,7 @@ async def test_5_and_8_no_further_mission_commands_once_search_complete(tmp_path
     again, regardless of how long the payload sequence (all Offboard
     position/velocity commands) takes."""
     flight = MockFlightBackend()
-    detector = _FixedShapeDetector(["MAVI_ALTIGEN", "KIRMIZI_UCGEN"])
+    detector = _FixedShapeDetector(["MAVI_ALTIGEN", "KIRMIZI_UCGEN"], flight=flight)
     orch, position_store, interlock = _build_orchestrator(flight, detector, tmp_path)
     orch.centering.kp_altitude = 5.0
 

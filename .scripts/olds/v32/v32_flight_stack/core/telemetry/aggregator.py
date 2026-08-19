@@ -18,7 +18,7 @@ from typing import Optional
 from core.mission.blocking import BlockingKind, BlockingState
 from core.mission.phase import MissionPhase
 from core.telemetry.events import Event
-from core.telemetry.snapshot import MissionSnapshot, TrackState
+from core.telemetry.snapshot import CenteringState, MissionSnapshot, TrackState
 
 RECENT_EVENTS_MAX = 80
 
@@ -113,6 +113,38 @@ class RuntimeStateAggregator:
                 snap.vision.frame_count += 1
                 snap.vision.last_detection_count = event.data.get("detection_count", 0)
 
+            elif event.code == "CENTERING_STARTED":
+                # A new pursuit always begins unlocked, even if the previous
+                # one ended converged -- otherwise the indicator would open
+                # black on a target it has not centred yet.
+                snap.centering = CenteringState(
+                    shape_type=event.data.get("shape_type", ""), active=True, updated_at=event.ts)
+
+            elif event.code == "CENTERING_STEP":
+                snap.centering = CenteringState(
+                    shape_type=event.data.get("shape_type", ""),
+                    converged=bool(event.data.get("converged")),
+                    active=True,
+                    attempt=event.data.get("attempt", 0),
+                    max_attempts=event.data.get("max_attempts", 0),
+                    dx_px=event.data.get("dx_px"),
+                    dy_px=event.data.get("dy_px"),
+                    target_px=tuple(event.data["target_px"]) if event.data.get("target_px") else None,
+                    center_px=tuple(event.data["center_px"]) if event.data.get("center_px") else None,
+                    ground_distance_m=event.data.get("ground_distance_m"),
+                    updated_at=event.ts,
+                )
+
+            elif event.code in ("CENTERING_CONVERGED", "CENTERING_TIMED_OUT"):
+                # The loop has exited. Keep the last known geometry (the
+                # overlay still has a live target to annotate through hover
+                # and GPS save) but record the outcome: converged holds the
+                # lock indicator black through those phases, a timeout
+                # leaves it yellow.
+                snap.centering.active = False
+                snap.centering.converged = (event.code == "CENTERING_CONVERGED")
+                snap.centering.updated_at = event.ts
+
             elif event.code == "TRACK_STATE_UPDATED":
                 shape = event.data.get("shape_type")
                 if shape:
@@ -130,6 +162,33 @@ class RuntimeStateAggregator:
                 for k, v in event.data.items():
                     if hasattr(snap.payload, k):
                         setattr(snap.payload, k, v)
+
+            elif event.code == "PAYLOAD_STATE":
+                # ADR-010 P2. Fields are merged rather than replaced: the
+                # producer publishes different subsets at different moments
+                # (a descent step carries no release altitude, a release
+                # carries no descent step), and a wholesale replace would
+                # blank out whichever half this event did not mention.
+                p = snap.payload
+                p.active_index = event.data.get("payload_index", p.active_index)
+                p.active_shape = event.data.get("shape_type", p.active_shape)
+                if event.data.get("current_alt_m") is not None:
+                    p.current_alt_m = event.data["current_alt_m"]
+                if event.data.get("target_alt_m") is not None:
+                    p.target_alt_m = event.data["target_alt_m"]
+                if event.data.get("descent_step"):
+                    p.descent_step = event.data["descent_step"]
+                if event.data.get("vision_committed") is not None:
+                    p.vision_committed = bool(event.data["vision_committed"])
+                if event.data.get("last_offset_cm") is not None:
+                    p.last_offset_cm = event.data["last_offset_cm"]
+                if event.data.get("released"):
+                    p.released_alt_m = event.data.get("released_alt_m")
+                    p.released_within_tolerance = event.data.get("within_tolerance")
+                    p.released_at = event.data.get("released_at") or event.ts
+                    p.released_index = event.data.get("payload_index", p.active_index)
+                    p.released_shape = event.data.get("shape_type", p.active_shape)
+                p.updated_at = event.ts
 
             elif event.code == "PAYLOAD_VERIFICATION_RESULT":
                 snap.payload.last_verification_marker = event.data.get("expected_marker")

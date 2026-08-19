@@ -16,27 +16,42 @@ import pytest
 from mocks.mock_flight_backend import MockFlightBackend
 from mocks.mock_camera_source import MockCameraSource
 
+from core.detection.detection_feed import DetectionFeed
 from core.detection.types import Detection
 from core.navigation.centering_controller import CenteringController
 
 
-class _FixedDetector:
-    """Always reports the same detection, at a fixed pixel offset from
-    center -- lets a test assert set_velocity_body is called repeatedly
-    (continuous streaming) without needing real flight physics."""
-    def __init__(self, center_px):
-        self.center_px = center_px
-    async def detect(self, frame):
-        return [Detection(shape_type="MAVI_ALTIGEN", confidence=0.9,
-                          center_px=self.center_px, bbox_px=(0, 0, 10, 10))]
+class _FixedFeed(DetectionFeed):
+    """ADR-008 B1: go_to_and_center() no longer calls detect() -- it reads
+    the orchestrator's single detection loop through a DetectionFeed. This
+    stands in for a loop that keeps reporting the same detection at a fixed
+    pixel offset, which is what the old _FixedDetector did, so these tests
+    still exercise the control law and nothing else.
+
+    Overriding fresh() (rather than publishing once) keeps the sample
+    permanently fresh: real freshness/staleness behaviour is covered in
+    test_detector_exclusivity.py."""
+    def __init__(self, center_px, shape_type="MAVI_ALTIGEN"):
+        super().__init__()
+        self.publish([Detection(shape_type=shape_type, confidence=0.9,
+                                center_px=center_px, bbox_px=(0, 0, 10, 10))])
+
+    def fresh(self, now=None):
+        return self.latest()
+
+
+class _EmptyFeed(DetectionFeed):
+    """A live detection loop that simply does not see the target."""
+    def fresh(self, now=None):
+        return None
 
 
 @pytest.mark.asyncio
 async def test_go_to_and_center_actually_commands_velocity_when_off_center():
     flight = MockFlightBackend()
     camera = MockCameraSource()  # 640x480 -> center (320, 240)
-    detector = _FixedDetector(center_px=(500.0, 240.0))  # far right of center, never "arrives"
-    controller = CenteringController(flight, detector, camera)
+    feed = _FixedFeed(center_px=(500.0, 240.0))  # far right of center, never "arrives"
+    controller = CenteringController(flight, feed, camera)
     controller.lateral_timeout_s = 2.0  # keep this "never converges" test fast
 
     converged = await controller.go_to_and_center("MAVI_ALTIGEN")
@@ -57,8 +72,8 @@ async def test_go_to_and_center_converges_and_stops_when_already_centered():
     flight = MockFlightBackend()  # _global_pos altitude fixed at 15.0 == MISSION_ALTITUDE_M default
     camera = MockCameraSource()  # 640x480 -> center (320, 240)
     # dx=2/320=0.00625, dy=1/240=0.00417 -- within the +/-0.01 normalized tolerance.
-    detector = _FixedDetector(center_px=(322.0, 241.0))
-    controller = CenteringController(flight, detector, camera)
+    feed = _FixedFeed(center_px=(322.0, 241.0))
+    controller = CenteringController(flight, feed, camera)
 
     converged = await controller.go_to_and_center("MAVI_ALTIGEN")
 
@@ -76,8 +91,8 @@ async def test_go_to_and_center_precision_tightened_old_20px_point_no_longer_con
     -- this is a deliberate precision tightening, not a regression."""
     flight = MockFlightBackend()
     camera = MockCameraSource()
-    detector = _FixedDetector(center_px=(335.0, 250.0))
-    controller = CenteringController(flight, detector, camera)
+    feed = _FixedFeed(center_px=(335.0, 250.0))
+    controller = CenteringController(flight, feed, camera)
     controller.lateral_timeout_s = 2.0  # keep this "never converges" test fast
 
     converged = await controller.go_to_and_center("MAVI_ALTIGEN")
@@ -93,9 +108,9 @@ async def test_go_to_and_center_descends_to_target_altitude():
     lateral position at whatever altitude it started."""
     flight = MockFlightBackend()  # starts at 15.0m (MockFlightBackend default)
     camera = MockCameraSource()
-    detector = _FixedDetector(center_px=(320.0, 240.0))  # dead-center, lateral already converged
+    feed = _FixedFeed(center_px=(320.0, 240.0))  # dead-center, lateral already converged
 
-    controller = CenteringController(flight, detector, camera)
+    controller = CenteringController(flight, feed, camera)
 
     converged = await controller.go_to_and_center("MAVI_ALTIGEN", altitude_m=10.0)
 
@@ -110,7 +125,7 @@ async def test_go_to_and_center_descends_to_target_altitude():
 @pytest.mark.asyncio
 async def test_nudge_forward_streams_then_stops():
     flight = MockFlightBackend()
-    controller = CenteringController(flight, detector=None, camera=None)
+    controller = CenteringController(flight, detection_feed=None, camera=None)
 
     await controller.nudge_forward(distance_m=0.10, speed_m_s=0.5)
 
@@ -128,7 +143,7 @@ async def test_climb_to_altitude_is_vision_independent_and_reaches_target():
     flight = MockFlightBackend()
     lat, lon, _ = flight._global_pos
     flight._global_pos = (lat, lon, 0.30)  # simulate post-drop altitude
-    controller = CenteringController(flight, detector=None, camera=None)
+    controller = CenteringController(flight, detection_feed=None, camera=None)
 
     converged = await controller.climb_to_altitude(15.0)
 
@@ -140,7 +155,7 @@ async def test_climb_to_altitude_is_vision_independent_and_reaches_target():
 @pytest.mark.asyncio
 async def test_switch_to_offboard_returns_true_when_px4_confirms_offboard():
     flight = MockFlightBackend()  # start_offboard() sets _flight_mode = "OFFBOARD"
-    controller = CenteringController(flight, detector=None, camera=None)
+    controller = CenteringController(flight, detection_feed=None, camera=None)
 
     result = await controller.switch_to_offboard()
 
@@ -159,7 +174,7 @@ async def test_switch_to_offboard_returns_false_when_px4_never_confirms():
             # switch_to_offboard()'s old implementation could never detect.
 
     flight = _StuckInMissionFlight()
-    controller = CenteringController(flight, detector=None, camera=None)
+    controller = CenteringController(flight, detection_feed=None, camera=None)
 
     result = await controller.switch_to_offboard()
 
@@ -173,8 +188,59 @@ async def test_switch_to_offboard_returns_false_when_px4_rejects_start():
             raise RuntimeError("OffboardError: NoSetpointSet")
 
     flight = _RejectingFlight()
-    controller = CenteringController(flight, detector=None, camera=None)
+    controller = CenteringController(flight, detection_feed=None, camera=None)
 
     result = await controller.switch_to_offboard()  # must not raise
 
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_go_to_and_center_holds_and_retries_at_setpoint_rate_when_target_not_in_frame():
+    """ADR-008 B1: the "target lost" branch used to asyncio.sleep(0.5) --
+    slower than the control cadence in exactly the situation that most
+    needs it, putting the setpoint stream at 2x PX4's ~500ms Offboard
+    timeout and stretching the 15s lateral budget to 75s of wall clock (the
+    2026-08-16 run spent 77.2s there). It must now hold at
+    OFFBOARD_SETPOINT_INTERVAL_S like every other iteration, while still
+    streaming a zero-velocity setpoint rather than going silent."""
+    import time
+    from core.config.parameters import OFFBOARD_SETPOINT_INTERVAL_S
+
+    flight = MockFlightBackend()
+    camera = MockCameraSource()
+    controller = CenteringController(flight, _EmptyFeed(), camera)
+    controller.lateral_timeout_s = 1.0  # -> 10 attempts at 0.1s
+
+    started = time.monotonic()
+    converged = await controller.go_to_and_center("MAVI_ALTIGEN")
+    elapsed = time.monotonic() - started
+
+    assert converged is False
+    expected_attempts = int(controller.lateral_timeout_s / OFFBOARD_SETPOINT_INTERVAL_S)
+    # The whole point: the budget is spent at the setpoint rate, so it takes
+    # ~lateral_timeout_s -- not 5x that.
+    assert elapsed < controller.lateral_timeout_s * 2.5
+    velocity_calls = [c for c in flight.calls if c[0] == 'set_velocity_body']
+    # A hold setpoint every iteration (never a silent gap), plus the final stop.
+    assert len(velocity_calls) >= expected_attempts
+    assert all(c[1] == {'forward_m_s': 0.0, 'right_m_s': 0.0, 'down_m_s': 0.0, 'yaw_rate_deg_s': 0.0}
+               for c in velocity_calls)
+
+
+@pytest.mark.asyncio
+async def test_budget_s_reports_the_real_loop_budget_not_a_fixed_constant():
+    """The dashboard's WAITING_CENTERING_CONVERGENCE timeout is sourced from
+    this, after reporting a fictional 5.0s while the loop ran 77s and 82s."""
+    from core.config.parameters import (
+        CENTERING_ALTITUDE_CHANGE_ATTEMPTS, MISSION_ALTITUDE_M, OFFBOARD_SETPOINT_INTERVAL_S,
+    )
+
+    controller = CenteringController(MockFlightBackend(), detection_feed=None, camera=None)
+    controller.lateral_timeout_s = 15.0
+
+    # Already at mission altitude -> lateral-only budget.
+    assert controller.budget_s(MISSION_ALTITUDE_M, MISSION_ALTITUDE_M) == pytest.approx(15.0)
+    # A real altitude change -> the larger fixed attempt budget.
+    assert controller.budget_s(15.0, 5.0) == pytest.approx(
+        CENTERING_ALTITUDE_CHANGE_ATTEMPTS * OFFBOARD_SETPOINT_INTERVAL_S)

@@ -45,9 +45,8 @@ class Gorev3PickupPhase:
         her karede yeniden dener -- go_to_and_center()'ın 'hedef kayboldu'
         döngüsüyle aynı mantık."""
         for _ in range(GOREV3_PICKUP_ALIGN_MAX_ATTEMPTS):
-            frame = await self.camera.get_frame()
             try:
-                return await self.visibility_strategy.locate_target(self.detector, frame)
+                return await self.visibility_strategy.locate_target(self.detector, None)
             except RuntimeError:
                 await asyncio.sleep(OFFBOARD_SETPOINT_INTERVAL_S)
         return None
@@ -96,9 +95,8 @@ class Gorev3PickupPhase:
         # yeniden ortalama değil (araç zaten hizalı ve konumlanmış).
         visible_frames = 0
         for _ in range(GOREV3_PICKUP_VISIBILITY_CONFIRM_FRAMES * 3):
-            frame = await self.camera.get_frame()
             try:
-                await self.visibility_strategy.locate_target(self.detector, frame)
+                await self.visibility_strategy.locate_target(self.detector, None)
                 visible_frames += 1
                 if visible_frames >= GOREV3_PICKUP_VISIBILITY_CONFIRM_FRAMES:
                     break
@@ -119,15 +117,19 @@ class Gorev3PickupPhase:
         for alt in GOREV3_PICKUP_VERIFY_CLIMB_STEPS_M:
             logger.info(f"Yükseliniyor: {alt}m")
             await self.flight.goto_position_ned_and_hold(0, 0, -alt, aligned_yaw, 2.0)
-            frame = await self.camera.get_frame()
-            detections = await self.detector.detect(frame)
+            # ADR-010 P3: `self.detector` is a FeedDetector, which answers
+            # from the shared DetectionFeed and ignores the frame -- Görev 3
+            # must not be a second detect() caller (see vision_runtime.py).
+            # None is passed rather than a freshly grabbed frame precisely to
+            # make that explicit: the frame this phase could grab is NOT the
+            # frame the streak logic was advanced on.
+            detections = await self.detector.detect(None)
             still_visible = any(d.shape_type == "KIRMIZI_DIKDORTGEN" for d in detections)
             if still_visible:
                 logger.warning(f"{alt}m irtifada Kırmızı Dikdörtgen hâlâ görüntüde.")
 
         logger.info("Doğrulama kontrolü yapılıyor (son irtifa)...")
-        frame = await self.camera.get_frame()
-        detections = await self.detector.detect(frame)
+        detections = await self.detector.detect(None)
 
         for d in detections:
             if d.shape_type == "KIRMIZI_DIKDORTGEN":

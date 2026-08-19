@@ -12,3 +12,23 @@ control_gains:
   centering_tolerance_y: 0.01
 actuator:
   pickup_channel: null  # TODO: gerçek servo/AUX kanal numarası
+
+# ADR-011 (2026-08-17): real payload mass, recorded here because the
+# SIMULATION deliberately does not use it.
+#
+# The real payload is 1.05 kg. The Gazebo x500_mono_cam_down airframe is
+# 2.0663 kg (base_link 2.0 + 4 rotors at 0.0161), so carrying two real
+# payloads would be +2.10 kg = +101% all-up mass. That pushes
+# thrust-to-weight and MPC_THR_HOVER far outside the tuning this SITL model
+# ships with, and the failure mode would be a sim artefact rather than
+# anything the real airframe would show. Simulation therefore mounts
+# 0.15 kg per payload (+14.5%), which keeps drop physics honest -- the body
+# still falls, bounces and settles under gravity -- without invalidating the
+# vehicle dynamics every other measurement in ADR-009/010 is calibrated
+# against.
+#
+# The real airframe is NOT the x500: this number is for the team's own
+# mass/thrust budget, not for the simulator.
+payload:
+  real_mass_kg: 1.05
+  simulated_mass_kg: 0.15   # Tools/simulation/gz/worlds/default.sdf

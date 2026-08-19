@@ -58,7 +58,27 @@ class HealthMonitor:
         with self._lock:
             self._dependents.setdefault(depends_on, set()).add(subsystem)
 
+    # ADR-009 D2: codes this monitor publishes itself. They carry
+    # subsystem=<the subsystem being described>, so without this exclusion
+    # on_event() counts them as heartbeats FOR that subsystem -- and since
+    # check() publishes through the same bus it is subscribed to, a
+    # completely dead subsystem feeds itself forever:
+    #
+    #   check() sees age>interval -> publishes DEGRADED(subsystem=X)
+    #     -> on_event() records X as seen "now"
+    #       -> next check() sees a fresh X -> HEALTHY -> publishes again ...
+    #
+    # Observed live on 2026-08-16 23:10-23:11: MavsdkBackendBase oscillated
+    # HEALTHY<->DEGRADED<->STALE for 66.8 seconds during which the vehicle
+    # link delivered nothing at all, and never once reached DOWN -- so the
+    # dashboard could not tell the operator the flight backend was gone.
+    # DOWN is the whole point of this class (ADR-004 §10: "going silent IS
+    # the signal"), and it was unreachable for any registered subsystem.
+    _SELF_EMITTED_CODES = frozenset({"HEALTH_STATE_CHANGED"})
+
     def on_event(self, event: Event) -> None:
+        if event.code in self._SELF_EMITTED_CODES:
+            return
         if event.subsystem in self._cadences:
             with self._lock:
                 self._last_seen[event.subsystem] = event.ts

@@ -5,6 +5,27 @@ ayrı sınıflara bölünmesinin nedeni yalnızca gelecekte farklılaşma ihtima
 
 from abc import ABC, abstractmethod
 
+
+class TelemetryStale(RuntimeError):
+    """ADR-009 D1. Raised by a telemetry getter when the newest cached
+    sample is older than its freshness bound -- i.e. the vehicle link has
+    gone quiet and the value would be a frozen lie rather than a reading.
+
+    CONTRACT (applies to every getter that serves from a background stream
+    cache): raise, never return a stale value, and never return None. A
+    control loop must be able to write `pos = await flight.get_global_
+    position()` and know that if it got a value, the value is current.
+
+    This exists because ADR-008 B0 replaced blocking per-call subscriptions
+    with non-blocking cache reads and lost the one useful property of the
+    old design: a dead channel used to block or raise. On 2026-08-16 a
+    wedged MAVSDK channel let goto_global_position_and_wait() fly its full
+    60s timeout against a position and velocity that had not changed in
+    66.8 seconds, and land() then timed out too. Callers are expected to
+    treat this as "my inputs are dead": stop commanding, report it, and
+    fall back -- not to retry against the same cache."""
+
+
 class IFlightBackend(ABC):
     
     @abstractmethod
@@ -119,6 +140,11 @@ class IFlightBackend(ABC):
         pass
         
     @abstractmethod
+    async def get_current_mission_index(self) -> int:
+        """ADR-010 R2: PX4's current index within the uploaded route."""
+        pass
+
+    @abstractmethod
     async def is_mission_finished(self) -> bool:
         """Mission modunun tamamlanıp tamamlanmadığını kontrol eder."""
         pass
@@ -127,3 +153,13 @@ class IFlightBackend(ABC):
     async def switch_to_offboard_from_mission(self) -> None:
         """Görev 2 Bölüm 8: Mission durur, Offboard başlar."""
         pass
+
+    # W4: deliberately NOT abstract. A status text is an operator-visible
+    # convenience (it surfaces in QGC's message bubble), never something the
+    # mission depends on, so a backend that cannot send one must degrade to
+    # silence rather than fail to instantiate. Existing backends therefore
+    # keep working unchanged and only override this if they can do better.
+    async def send_status_text(self, text: str, severity: str = "INFO") -> bool:
+        """Send a MAVLink STATUSTEXT to the GCS. Returns False when the
+        backend has no channel for it. Must never raise."""
+        return False

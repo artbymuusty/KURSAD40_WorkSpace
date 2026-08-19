@@ -86,6 +86,15 @@ class HSVContourDetector(IDetector):
         return (x + w // 2, y + h // 2)
 
     @staticmethod
+    def _contour_of(poly) -> list:
+        """ADR-010 P5: the approxPolyDP polygon this detection was accepted
+        on, as plain (x, y) floats. The detector already computes it for the
+        vertex-count/convexity gates -- this just stops throwing it away, so
+        the overlay can stroke the real shape instead of a bounding box. No
+        detection logic reads it."""
+        return [(float(p[0][0]), float(p[0][1])) for p in poly]
+
+    @staticmethod
     def _min_side_len(poly) -> float:
         pts = [poly[i][0] for i in range(len(poly))]
         lens = [np.linalg.norm(pts[i] - pts[(i + 1) % len(pts)]) for i in range(len(pts))]
@@ -139,6 +148,7 @@ class HSVContourDetector(IDetector):
                         confidence=0.9,  # see triangle/hexagon comment above -- deterministic classifier
                         center_px=(float(center[0]), float(center[1])),
                         bbox_px=(float(x), float(y), float(x + bw), float(y + bh)),
+                        contour_px=self._contour_of(approx),
                         rotation_deg=long_edge_deg,
                     )
 
@@ -208,6 +218,7 @@ class HSVContourDetector(IDetector):
                         confidence=0.9,
                         center_px=(float(center[0]), float(center[1])),
                         bbox_px=(float(x), float(y), float(x + bw), float(y + bh)),
+                        contour_px=self._contour_of(approx),
                     )
         if best_tri and self._update_streak("triangle", (int(best_tri.center_px[0]), int(best_tri.center_px[1]))):
             detections.append(best_tri)
@@ -244,16 +255,50 @@ class HSVContourDetector(IDetector):
                     confidence=0.9,
                     center_px=(float(center[0]), float(center[1])),
                     bbox_px=(float(x), float(y), float(x + bw), float(y + bh)),
+                    contour_px=self._contour_of(approx),
                 )
         if best_hex and self._update_streak("hexagon", (int(best_hex.center_px[0]), int(best_hex.center_px[1]))):
             detections.append(best_hex)
 
-        red_rect = self._detect_rectangle(red_mask, area_scale, "KIRMIZI_DIKDORTGEN", "red_rect")
-        if red_rect:
-            detections.append(red_rect)
-
-        blue_rect = self._detect_rectangle(blue_mask, area_scale, "MAVI_DIKDORTGEN", "blue_rect")
-        if blue_rect:
-            detections.append(blue_rect)
+        # PHASE 13 D2c: ONE CONTOUR, ONE CLASS.
+        #
+        # Measured 2026-08-17 over 1741 live frames: 122 of them emitted
+        # KIRMIZI_DIKDORTGEN *and* KIRMIZI_UCGEN together, from the SAME
+        # single red blob -- identical area distribution (median 512 px2 in
+        # both sets), 3 vertices at eps 0.03, and not one of them touching
+        # the frame edge. There is no second red object in the scene: no
+        # frame in the entire flight ever contained more than one red or
+        # more than one blue blob, so the payload contributes nothing.
+        #
+        # The cause is that the same contour is offered to two shape gates
+        # with different eps sweeps. A triangle approximates to 3 vertices
+        # over the triangle gate's 0.03-0.09 range and to 4 over the
+        # rectangle gate's tighter 0.02-0.06 range, where one slightly
+        # rounded corner splits in two. Both gates then pass their colour
+        # and streak checks honestly, and both commit -- so the feed offers
+        # a "rectangle" that is really the arena triangle, which Görev 3
+        # (whose pickup target IS a rectangle) would chase.
+        #
+        # A rectangle sitting on top of a shape already committed as a
+        # triangle or hexagon is therefore that same shape, and is dropped.
+        # The specific classes win because they are the arena targets; the
+        # rectangles are secondary verification markers.
+        for mask, shape_type, streak_key in ((red_mask, "KIRMIZI_DIKDORTGEN", "red_rect"),
+                                             (blue_mask, "MAVI_DIKDORTGEN", "blue_rect")):
+            rect = self._detect_rectangle(mask, area_scale, shape_type, streak_key)
+            if rect and not self._overlaps_committed(rect, detections):
+                detections.append(rect)
 
         return detections
+
+    @staticmethod
+    def _overlaps_committed(rect: Detection, committed: List[Detection]) -> bool:
+        """True when this rectangle's centre falls inside an already
+        committed triangle/hexagon -- i.e. it is that same object seen
+        through a different vertex count, not a second one."""
+        cx, cy = rect.center_px
+        for det in committed:
+            x1, y1, x2, y2 = det.bbox_px
+            if x1 <= cx <= x2 and y1 <= cy <= y2:
+                return True
+        return False

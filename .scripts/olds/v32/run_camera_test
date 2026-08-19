@@ -8,4 +8,6 @@ echo " KURSAD40 V30"
 echo " Camera Diagnostic Tool"
 echo "====================================="
 echo ""
-../../.venv/bin/python process_manager.py start_test
+source "$(dirname "$0")/resolve_python.sh"
+
+"$PYTHON_BIN" process_manager.py start_test

@@ -51,6 +51,12 @@ if (gz-transport_FOUND)
 		MAIN gz_bridge
 		COMPILE_FLAGS
 			${MAX_CUSTOM_OPT_LEVEL}
+			# GZMixingInterfaceESC.cpp / GZMixingInterfaceWheel.cpp call
+			# RepeatedField::Resize(), which Homebrew's recent protobuf
+			# (35.1+) marks deprecated (still fully functional --
+			# ABSL_DEPRECATE_AND_INLINE keeps it working) but PX4's
+			# global -Werror turns that notice into a hard build failure.
+			-Wno-error=deprecated-declarations
 		SRCS
 			GZBridge.cpp
 			GZBridge.hpp

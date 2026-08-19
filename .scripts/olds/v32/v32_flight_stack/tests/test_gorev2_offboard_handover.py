@@ -19,6 +19,8 @@ from core.detection.target_selector import TargetSelector
 from core.mission.debounce import DebounceTracker
 from core.position_log.position_store import PositionStore
 from core.mission.interlock import PayloadInterlock
+from core.detection.detection_feed import DetectionFeed
+from core.detection.vision_runtime import VisionRuntime
 from core.navigation.centering_controller import CenteringController
 from core.mission.payload_release import PayloadReleaseService
 from core.mission.gorev2_fsm import PayloadMissionSequencer
@@ -54,8 +56,11 @@ def _build_orchestrator(flight, tmp_path, min_consecutive_frames=1):
     position_store = PositionStore(str(tmp_path / "positions.json"))
     interlock = PayloadInterlock()
     checkpoint = MissionCheckpoint()
-    centering = CenteringController(flight, detector, camera)
-    release_service = PayloadReleaseService(actuator, detector, camera, centering, flight)
+    # ADR-008 B1: centering/verification consume the orchestrator's one
+    # detection loop through this feed; only the orchestrator gets the detector.
+    detection_feed = DetectionFeed()
+    centering = CenteringController(flight, detection_feed, camera)
+    release_service = PayloadReleaseService(actuator, detection_feed, camera, centering, flight)
     sequencer = PayloadMissionSequencer(flight, centering, interlock, position_store, release_service)
 
     return Gorev2Orchestrator(
@@ -63,6 +68,11 @@ def _build_orchestrator(flight, tmp_path, min_consecutive_frames=1):
         interlock=interlock, position_store=position_store, debounce=debounce,
         validator=validator, selector=selector, centering=centering, sequencer=sequencer,
         checkpoint=checkpoint, release_service=release_service,
+        detection_feed=detection_feed,
+        # ADR-010 P3: vision now lives outside the orchestrator. These
+        # tests exercise Görev 2 alone, so they scope a runtime to this
+        # run; production (main_gz) owns one for the whole mission.
+        vision_runtime=VisionRuntime(camera, detector, detection_feed),
     )
 
 

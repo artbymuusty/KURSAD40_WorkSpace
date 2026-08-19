@@ -1,0 +1,3 @@
+/home/muusty/autokursad/Tools/simulation/gz/models
+
+Bu kendi uzantındaki dosyayı varsa değiştir yoksa ekle!

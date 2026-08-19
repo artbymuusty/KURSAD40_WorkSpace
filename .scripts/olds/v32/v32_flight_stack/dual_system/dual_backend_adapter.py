@@ -93,7 +93,36 @@ class DualFlightBackend(IFlightBackend):
 
     async def start_mission(self) -> None:
         await asyncio.gather(self._real.start_mission(), self._sim.start_mission())
+
+    # ADR-007. This adapter enumerates every method explicitly (no
+    # inheritance from MavsdkBackendBase, no __getattr__ delegation), so the
+    # new raw-mission calls must be forwarded here too or dual mode raises
+    # AttributeError the moment the orchestrator validates the route.
+    async def get_raw_mission_items(self) -> list:
+        real_items, sim_items = await asyncio.gather(
+            self._real.get_raw_mission_items(), self._sim.get_raw_mission_items()
+        )
+        if len(real_items) != len(sim_items):
+            logger.warning(
+                f"DUAL UYUMSUZLUK: real raw mission item count={len(real_items)} "
+                f"sim item count={len(sim_items)} -- operatör her iki taraf için de "
+                f"aynı planı yüklemiş mi kontrol edilmeli"
+            )
+        # The real vehicle is authoritative, same convention as
+        # confirm_existing_mission()/is_mission_finished() above.
+        return real_items
+
+    async def set_current_mission_item(self, index: int) -> None:
+        await asyncio.gather(
+            self._real.set_current_mission_item(index),
+            self._sim.set_current_mission_item(index),
+        )
         
+    async def get_current_mission_index(self) -> int:
+        real_idx, _sim_idx = await asyncio.gather(
+            self._real.get_current_mission_index(), self._sim.get_current_mission_index())
+        return real_idx
+
     async def is_mission_finished(self) -> bool:
         real_finished, sim_finished = await asyncio.gather(self._real.is_mission_finished(), self._sim.is_mission_finished())
         return real_finished

@@ -28,6 +28,15 @@ class FrameSample:
     frame_bgr: np.ndarray
     detections: List[Detection] = field(default_factory=list)
     ts: float = field(default_factory=time.time)
+    # ADR-008 B1: the frame is always live (the grab loop runs at ~30Hz
+    # independently), but the DETECTIONS drawn on it come from a separate
+    # loop that can fall behind or stop. Carrying that distinction to the
+    # dashboard is what stops a dead vision pipeline from looking like a
+    # working one: on 2026-08-16 the same frozen box was redrawn over live
+    # frames for 82 seconds, which is why the run looked healthy on screen
+    # while nothing was detecting at all.
+    detections_stale: bool = False
+    detections_age_s: Optional[float] = None
 
 
 class FrameChannel:
@@ -35,10 +44,12 @@ class FrameChannel:
         self._lock = threading.Lock()
         self._last: Optional[FrameSample] = None
 
-    def publish(self, frame_bgr: np.ndarray, detections: Optional[List[Detection]] = None) -> None:
+    def publish(self, frame_bgr: np.ndarray, detections: Optional[List[Detection]] = None,
+                detections_stale: bool = False, detections_age_s: Optional[float] = None) -> None:
         """Called from the mission loop -- must never block it. Drops the
         previous frame if the dashboard hasn't consumed it yet."""
-        sample = FrameSample(frame_bgr=frame_bgr, detections=detections or [])
+        sample = FrameSample(frame_bgr=frame_bgr, detections=detections or [],
+                             detections_stale=detections_stale, detections_age_s=detections_age_s)
         with self._lock:
             self._last = sample
 

@@ -19,6 +19,11 @@ import subprocess
 import time
 import traceback
 
+try:  # normal import when v32_flight_stack is on PYTHONPATH (mission entrypoints)
+    from gz_system.gz_env import apply_gz_env, describe_gz_env
+except ImportError:  # running from inside gz_system/ (standalone/legacy callers)
+    from gz_env import apply_gz_env, describe_gz_env
+
 _DIR = os.path.dirname(os.path.abspath(__file__))
 PID_FILE = os.path.join(_DIR, ".camera_service.pid")
 LOG_FILE = os.path.join(_DIR, ".camera_service.log")
@@ -26,18 +31,24 @@ SERVICE_SCRIPT = os.path.join(_DIR, "camera_service.py")
 
 
 def is_running(pid: int) -> bool:
-    """Check if a process with the given PID is currently running and is our camera_service."""
+    """Check if a process with the given PID is currently running and is our camera_service.
+
+    Uses `ps` rather than reading /proc/{pid}/cmdline (Linux-only -- there is
+    no /proc filesystem on macOS) so this works unmodified on both platforms.
+    """
     try:
         os.kill(pid, 0)
     except OSError:
         return False
 
     try:
-        with open(f"/proc/{pid}/cmdline", "r") as f:
-            cmdline = f.read().replace('\x00', ' ')
-            if "camera_service.py" in cmdline:
-                return True
-    except FileNotFoundError:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True, text=True, timeout=2,
+        )
+        if "camera_service.py" in result.stdout:
+            return True
+    except Exception:
         pass
 
     return False
@@ -65,15 +76,29 @@ def start(topic: str, zmq_addr: str) -> None:
         os.remove(PID_FILE)
 
     print(f"[CAMERA_SERVICE_MANAGER] Starting camera_service.py (topic={topic}, zmq={zmq_addr})...")
+    print(f"[CAMERA_SERVICE_MANAGER] gz-transport env for child: {describe_gz_env(apply_gz_env(os.environ.copy()))}")
 
     with open(LOG_FILE, "w") as out:
-        # Inject system dist-packages into PYTHONPATH strictly for this
-        # subprocess: solves the gz-transport ModuleNotFoundError without
-        # polluting the venv or requiring the bindings to be pip-installed
-        # into it (they're apt-installed system-side, tied to Gazebo).
+        # Inject the system Gazebo Python bindings into PYTHONPATH strictly
+        # for this subprocess: solves the gz-transport ModuleNotFoundError
+        # without polluting the venv or requiring the bindings to be
+        # pip-installed into it (they're tied to the system Gazebo install --
+        # apt-installed on Linux, Homebrew-installed on macOS).
         env = os.environ.copy()
-        system_paths = "/usr/lib/python3/dist-packages"
+        if sys.platform == "darwin":
+            brew_prefix = os.environ.get("HOMEBREW_PREFIX", "/opt/homebrew")
+            system_paths = f"{brew_prefix}/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+        else:
+            system_paths = "/usr/lib/python3/dist-packages"
         env["PYTHONPATH"] = f"{system_paths}:{env['PYTHONPATH']}" if "PYTHONPATH" in env else system_paths
+
+        # Pass the gz-transport settings EXPLICITLY rather than relying on
+        # inheritance: if this process was started without them (e.g. launched
+        # straight from an IDE or a shell that never sourced gz_env.sh), the
+        # child would fall back to gz-transport's default
+        # "<hostname>:<username>" partition, land in a different partition
+        # from the simulator, and silently receive zero frames.
+        apply_gz_env(env)
 
         try:
             p = subprocess.Popen(
