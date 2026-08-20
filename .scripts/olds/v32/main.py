@@ -267,7 +267,6 @@ def main():
                         detector_fps=fps_info.get("inf", 0),
                         tracker_fps=fps_info.get("trk", 0),
                         pipeline_latency=fps_info.get("lat", 0),
-1
                         mission_state=manager.state_data.current_state,
                         mission_phase=manager.state_data.active_mode,
                         mission_time=manager.state_data.state_time(),
